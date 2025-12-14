@@ -1,52 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/news_provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/news_bloc.dart';
+import '../bloc/news_state.dart';
+import '../bloc/news_event.dart';
 import '../components/post_card.dart';
+import '../models/post_model.dart';
 import 'post_detail_screen.dart';
 
 class BookmarksScreen extends StatelessWidget {
-  const BookmarksScreen({Key? key}) : super(key: key);
+  const BookmarksScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<NewsProvider>(
-      builder: (context, prov, _) {
-        if (prov.bookmarks.isEmpty) {
-          return const Center(child: Text('No bookmarks yet'));
-        }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Guardados')),
+      body: BlocBuilder<NewsBloc, NewsState>(
+        builder: (context, state) {
+          // 🔄 Loading
+          if (state is NewsInitial || state is NewsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        // Filtrar los posts que ya existen en cache
-        final bookmarkedPosts = prov.posts
-            .where((post) => prov.bookmarks.contains(post.id))
-            .toList();
+          // ❌ Error
+          if (state is NewsError) {
+            return Center(child: Text(state.message));
+          }
 
-        if (bookmarkedPosts.isEmpty) {
-          return const Center(child: Text("No bookmarks available locally"));
-        }
+          // ✅ Posts cargados
+          if (state is NewsLoaded) {
+            final List<Post> bookmarkedPosts = state.posts
+                .where((post) => state.bookmarks.contains(post.id))
+                .toList();
 
-        return ListView.builder(
-          itemCount: bookmarkedPosts.length,
-          itemBuilder: (context, i) {
-            final post = bookmarkedPosts[i];
-
-            return PostCard(
-              post: post,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => PostDetailScreen(post: post)),
-              ),
-              trailing: IconButton(
-                icon: Icon(
-                  prov.isBookmarked(post.id)
-                      ? Icons.bookmark
-                      : Icons.bookmark_border,
+            // 📭 Empty
+            if (bookmarkedPosts.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No tienes noticias guardadas',
+                  style: TextStyle(fontSize: 16),
                 ),
-                onPressed: () => prov.toggleBookmark(post),
-              ),
+              );
+            }
+
+            // 📋 Listado
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: bookmarkedPosts.length,
+              itemBuilder: (context, index) {
+                final post = bookmarkedPosts[index];
+
+                return PostCard(
+                  post: post,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PostDetailScreen(post: post),
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.bookmark),
+                    onPressed: () {
+                      context.read<NewsBloc>().add(ToggleBookmark(post));
+                    },
+                  ),
+                );
+              },
             );
-          },
-        );
-      },
+          }
+
+          // 🧼 Fallback
+          return const Center(child: Text('No hay datos disponibles'));
+        },
+      ),
     );
   }
 }

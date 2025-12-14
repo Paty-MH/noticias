@@ -11,12 +11,14 @@ class ApiService {
     int perPage = Constants.perPage,
   }) async {
     final uri = Uri.parse('$base/posts?per_page=$perPage&page=$page&_embed');
+
     final res = await http.get(uri);
+
     if (res.statusCode == 200) {
-      final List<dynamic> body = json.decode(res.body);
+      final List body = json.decode(res.body);
       return body.map((e) => Post.fromJson(e)).toList();
     } else {
-      throw Exception('Error fetching posts: ${res.statusCode}');
+      throw Exception('Error fetching posts');
     }
   }
 
@@ -28,23 +30,31 @@ class ApiService {
     final uri = Uri.parse(
       '$base/posts?search=${Uri.encodeComponent(query)}&per_page=$perPage&page=$page&_embed',
     );
+
     final res = await http.get(uri);
+
     if (res.statusCode == 200) {
-      final List<dynamic> body = json.decode(res.body);
+      final List body = json.decode(res.body);
       return body.map((e) => Post.fromJson(e)).toList();
     } else {
-      throw Exception('Error searching posts: ${res.statusCode}');
+      throw Exception('Error searching posts');
     }
   }
 
+  /// 🔥 ESTE ERA EL PROBLEMA
   Future<List<Map<String, dynamic>>> fetchCategories() async {
     final uri = Uri.parse('$base/categories?per_page=100');
+
     final res = await http.get(uri);
+
     if (res.statusCode == 200) {
-      final List<dynamic> body = json.decode(res.body);
-      return body.cast<Map<String, dynamic>>();
+      final List body = json.decode(res.body);
+
+      return body
+          .map<Map<String, dynamic>>((e) => {'id': e['id'], 'name': e['name']})
+          .toList();
     } else {
-      throw Exception('Error fetching categories: ${res.statusCode}');
+      throw Exception('Error fetching categories');
     }
   }
 
@@ -56,12 +66,14 @@ class ApiService {
     final uri = Uri.parse(
       '$base/posts?categories=$categoryId&per_page=$perPage&page=$page&_embed',
     );
+
     final res = await http.get(uri);
+
     if (res.statusCode == 200) {
-      final List<dynamic> body = json.decode(res.body);
+      final List body = json.decode(res.body);
       return body.map((e) => Post.fromJson(e)).toList();
     } else {
-      throw Exception('Error fetching posts by category: ${res.statusCode}');
+      throw Exception('Error fetching posts by category');
     }
   }
 }

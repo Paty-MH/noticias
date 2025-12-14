@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.1
+  sdk: ">=3.10.1 <4.0.0"
 
 dependencies:
   flutter:
@@ -13,30 +13,38 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
-  # HTTP
+  # 🌐 Networking
+  http: ^1.6.0
   dio: ^5.6.0
 
-  # Estado
-  provider: ^6.1.5+1
+  # 🔄 Manejo de estado (BLoC)
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
 
-  # Modelos + JSON
+  # 🧱 Modelos + JSON
   freezed_annotation: ^2.4.1
   json_annotation: ^4.9.0
 
-  # Mostrar HTML de WordPress
+  # 📰 Mostrar HTML de WordPress
   flutter_html: ^3.0.0
 
-  # Persistencia
+  # 💾 Persistencia
+  shared_preferences: ^2.5.4
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+
+  # 🎨 UI / UX
   cached_network_image: ^3.4.1
-  http: ^1.6.0
   google_fonts: ^6.3.3
   shimmer: ^3.0.0
   intl: ^0.20.2
   url_launcher: ^6.3.2
+
+  # 🔊 Audio
   just_audio: ^0.10.5
-  shared_preferences: ^2.5.4
+
+  # 🖼 Iconos SVG personalizados
+  flutter_svg: ^2.1.1
 
 dev_dependencies:
   flutter_test:
@@ -44,10 +52,45 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
 
-  # Generadores de Freezed y JSON
+  # ⚙️ Generadores
   build_runner: ^2.4.8
   freezed: ^2.5.0
   json_serializable: ^6.9.0
 
+  # 🚀 ÍCONO Y SPLASH
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.0
+
+
+# 🚀 CONFIGURACIÓN DEL ÍCONO DE LA APP (Launcher)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/app_icon.png
+  min_sdk_android: 21
+
+
+# 🎬 CONFIGURACIÓN DEL SPLASH SCREEN
+flutter_native_splash:
+  color: "#000000"                     # ⚠️ CAMBIA este color si tu icono no es negro
+  image: assets/icon/app_icon.png
+  android: true
+  ios: true
+  web: false
+
+  # 🔥 ANDROID 12+ (OBLIGATORIO)
+  android_12:
+    color: "#000000"
+    image: assets/icon/app_icon.png
+    icon_background_color: "#000000"
+
+  # 🍎 iOS
+  ios_content_mode: scaleAspectFill
+
+
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/icon/
+    - assets/icons/

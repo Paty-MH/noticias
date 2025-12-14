@@ -1,120 +1,119 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/news_provider.dart';
-import 'post_detail_screen.dart';
-import '../components/post_card.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/news_bloc.dart';
+import '../bloc/news_event.dart';
+import '../bloc/news_state.dart';
+import 'category_posts_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({Key? key}) : super(key: key);
+  const CategoriesScreen({super.key});
+
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  List<Map<String, dynamic>> cats = [];
-  bool loading = true;
-  String? error;
-
   @override
   void initState() {
     super.initState();
-    loadCats();
-  }
 
-  Future<void> loadCats() async {
-    try {
-      final prov = Provider.of<NewsProvider>(context, listen: false);
-      final res = await prov.getCategories();
-      setState(() {
-        cats = res;
-        loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        error = e.toString();
-        loading = false;
-      });
-    }
-  }
-
-  void openCategory(int id, String name) async {
-    setState(() {
-      loading = true;
-    });
-    try {
-      final prov = Provider.of<NewsProvider>(context, listen: false);
-      final posts = await prov.fetchByCategory(id);
-      setState(() {
-        loading = false;
-      });
-
-      showModalBottomSheet(
-        context: context,
-        builder: (ctx) => ListView.builder(
-          itemCount: posts.length,
-          itemBuilder: (context, i) {
-            final post = posts[i];
-            return PostCard(
-              post: post,
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PostDetailScreen(post: post),
-                  ),
-                );
-              },
-              trailing: IconButton(
-                icon: Icon(
-                  prov.isBookmarked(post.id)
-                      ? Icons.bookmark
-                      : Icons.bookmark_border,
-                ),
-                onPressed: () => prov.toggleBookmark(post),
-              ),
-            );
-          },
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        loading = false;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    // 🔥 Pedir categorías solo si no existen
+    final bloc = context.read<NewsBloc>();
+    if (bloc.state is! CategoriesLoaded) {
+      bloc.add(FetchCategories());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Center(child: CircularProgressIndicator());
-    if (error != null) return Center(child: Text('Error: $error'));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Categorías'), centerTitle: true),
+      body: BlocBuilder<NewsBloc, NewsState>(
+        builder: (context, state) {
+          // 🔄 Loading
+          if (state is NewsInitial || state is NewsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-    return GridView.count(
-      padding: const EdgeInsets.all(16),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      children: cats.map((c) {
-        return ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white, // ✔ color de fondo correcto
-            foregroundColor: Colors.black87, // ✔ color del texto/iconos
-            padding: const EdgeInsets.all(18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-          ),
-          onPressed: () => openCategory(c['id'] as int, c['name'] as String),
-          child: Text(
-            (c['name'] ?? '').toString(),
-            textAlign: TextAlign.center,
-          ),
-        );
-      }).toList(),
+          // ❌ Error
+          if (state is NewsError) {
+            return Center(child: Text(state.message));
+          }
+
+          // ✅ Categorías cargadas
+          if (state is CategoriesLoaded) {
+            if (state.categories.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No hay categorías',
+                  style: TextStyle(fontSize: 16),
+                ),
+              );
+            }
+
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.4,
+              ),
+              itemCount: state.categories.length,
+              itemBuilder: (_, i) {
+                final cat = state.categories[i];
+
+                return GestureDetector(
+                  onTap: () {
+                    // 🔥 pedir posts de la categoría
+                    context.read<NewsBloc>().add(
+                      FetchPostsByCategory(cat['id'], cat['name']),
+                    );
+
+                    // 🔥 navegar
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CategoryPostsScreen(
+                          categoryId: cat['id'],
+                          categoryName: cat['name'],
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      cat['name'].toString().toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+
+          // 🧼 Fallback seguro
+          return const Center(child: Text('No hay datos disponibles'));
+        },
+      ),
     );
   }
 }
