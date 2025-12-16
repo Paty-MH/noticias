@@ -30,6 +30,11 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       final posts = await api.fetchPosts(page: _page);
       final bookmarks = await BookmarkStorage.getBookmarkedIds();
 
+      if (posts.isEmpty) {
+        emit(NewsEmpty());
+        return;
+      }
+
       emit(
         NewsLoaded(
           posts: posts,
@@ -37,8 +42,8 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
           hasMore: posts.length == Constants.perPage,
         ),
       );
-    } catch (e) {
-      emit(NewsError(e.toString()));
+    } catch (_) {
+      emit(const NewsError('No se pudieron cargar las noticias'));
     }
   }
 
@@ -48,16 +53,21 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
 
     if (!current.hasMore) return;
 
-    _page++;
-    final more = await api.fetchPosts(page: _page);
+    try {
+      _page++;
+      final more = await api.fetchPosts(page: _page);
 
-    emit(
-      NewsLoaded(
-        posts: [...current.posts, ...more],
-        bookmarks: current.bookmarks,
-        hasMore: more.length == Constants.perPage,
-      ),
-    );
+      emit(
+        NewsLoaded(
+          posts: [...current.posts, ...more],
+          bookmarks: current.bookmarks,
+          hasMore: more.length == Constants.perPage,
+        ),
+      );
+    } catch (_) {
+      // No rompemos la UI si falla la paginación
+      emit(current);
+    }
   }
 
   // ================= BOOKMARK =================
@@ -97,9 +107,14 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       final results = await api.searchPosts(event.query);
       final bookmarks = await BookmarkStorage.getBookmarkedIds();
 
+      if (results.isEmpty) {
+        emit(NewsEmpty());
+        return;
+      }
+
       emit(SearchLoaded(results: results, bookmarks: bookmarks));
-    } catch (e) {
-      emit(NewsError(e.toString()));
+    } catch (_) {
+      emit(const NewsError('Error al realizar la búsqueda'));
     }
   }
 
@@ -113,8 +128,8 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     try {
       final cats = await api.fetchCategories();
       emit(CategoriesLoaded(cats));
-    } catch (e) {
-      emit(NewsError(e.toString()));
+    } catch (_) {
+      emit(const NewsError('Error al cargar categorías'));
     }
   }
 
@@ -127,9 +142,14 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       final posts = await api.fetchPostsByCategory(event.categoryId);
       final bookmarks = await BookmarkStorage.getBookmarkedIds();
 
+      if (posts.isEmpty) {
+        emit(NewsEmpty());
+        return;
+      }
+
       emit(NewsLoaded(posts: posts, bookmarks: bookmarks, hasMore: false));
-    } catch (e) {
-      emit(NewsError(e.toString()));
+    } catch (_) {
+      emit(const NewsError('Error al cargar la categoría'));
     }
   }
 }

@@ -16,6 +16,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
+  bool _hasSearched = false;
 
   @override
   void dispose() {
@@ -23,16 +24,22 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  // 🔥 LIMPIAR BUSCADOR (sin romper Home)
+  // 🔥 LIMPIAR BUSCADOR
   void _clearSearch() {
     _controller.clear();
-    setState(() {});
+    setState(() {
+      _hasSearched = false;
+    });
   }
 
   // 🔍 BUSCAR
   void _doSearch(String q) {
     final query = q.trim();
     if (query.isEmpty) return;
+
+    setState(() {
+      _hasSearched = true;
+    });
 
     context.read<NewsBloc>().add(SearchPosts(query));
   }
@@ -95,8 +102,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 state is NewsError,
 
             builder: (_, state) {
-              // ⏳ Loading SOLO para search
-              if (state is NewsLoading) {
+              // ⏳ Loading SOLO después de buscar
+              if (state is NewsLoading && _hasSearched) {
                 return const Center(
                   child: CircularProgressIndicator(strokeWidth: 3),
                 );

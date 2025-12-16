@@ -28,10 +28,10 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // 🔐 pedir posts SOLO una vez
+    // 🔐 Pedir posts SOLO una vez
     if (!_loaded) {
       context.read<NewsBloc>().add(
-        FetchPostsByCategory(widget.categoryId, widget.categoryName),
+        FetchPostsByCategory(widget.categoryId), // ✅ CORRECTO
       );
       _loaded = true;
     }
@@ -42,28 +42,40 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.categoryName), centerTitle: true),
       body: BlocBuilder<NewsBloc, NewsState>(
+        // 🔑 Escuchar SOLO estados de posts
+        buildWhen: (_, state) =>
+            state is NewsLoading ||
+            state is NewsLoaded ||
+            state is NewsEmpty ||
+            state is NewsError,
+
         builder: (context, state) {
-          // 🔄 Loading seguro
-          if (state is NewsInitial || state is NewsLoading) {
-            return const Center(child: CircularProgressIndicator());
+          // ⏳ Loading SOLO de categoría
+          if (state is NewsLoading) {
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 3),
+            );
           }
 
           // ❌ Error
           if (state is NewsError) {
-            return Center(child: Text(state.message));
+            return Center(
+              child: Text(state.message, style: const TextStyle(fontSize: 16)),
+            );
+          }
+
+          // 🚫 Sin posts
+          if (state is NewsEmpty) {
+            return const Center(
+              child: Text(
+                'No hay noticias en esta categoría',
+                style: TextStyle(fontSize: 16),
+              ),
+            );
           }
 
           // ✅ Posts cargados
           if (state is NewsLoaded) {
-            if (state.posts.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No hay noticias en esta categoría',
-                  style: TextStyle(fontSize: 16),
-                ),
-              );
-            }
-
             return ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: state.posts.length,
@@ -94,8 +106,8 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
             );
           }
 
-          // 🧼 fallback
-          return const Center(child: Text('No hay datos'));
+          // 🧼 Fallback seguro
+          return const SizedBox();
         },
       ),
     );

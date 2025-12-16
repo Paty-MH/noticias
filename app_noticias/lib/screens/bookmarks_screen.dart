@@ -12,18 +12,40 @@ class BookmarksScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Guardados')),
+      backgroundColor: Colors.grey.shade100,
+
+      // ─────────────────────────────
+      // 🔖 APP BAR SUAVE
+      // ─────────────────────────────
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: Colors.black,
+        title: const Text(
+          'Guardados',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+
       body: BlocBuilder<NewsBloc, NewsState>(
         builder: (context, state) {
           // 🔄 Loading
           if (state is NewsInitial || state is NewsLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 3),
+            );
           }
 
           // ❌ Error
           if (state is NewsError) {
-            return Center(child: Text(state.message));
+            return _EmptyState(
+              icon: Icons.error_outline,
+              title: 'Error',
+              subtitle: state.message,
+            );
           }
 
           // ✅ Posts cargados
@@ -34,18 +56,18 @@ class BookmarksScreen extends StatelessWidget {
 
             // 📭 Empty
             if (bookmarkedPosts.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No tienes noticias guardadas',
-                  style: TextStyle(fontSize: 16),
-                ),
+              return const _EmptyState(
+                icon: Icons.bookmark_border,
+                title: 'Sin guardados',
+                subtitle: 'Aún no has guardado ninguna noticia',
               );
             }
 
             // 📋 Listado
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
               itemCount: bookmarkedPosts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final post = bookmarkedPosts[index];
 
@@ -58,7 +80,7 @@ class BookmarksScreen extends StatelessWidget {
                     ),
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.bookmark),
+                    icon: Icon(Icons.bookmark, color: theme.primaryColor),
                     onPressed: () {
                       context.read<NewsBloc>().add(ToggleBookmark(post));
                     },
@@ -69,8 +91,49 @@ class BookmarksScreen extends StatelessWidget {
           }
 
           // 🧼 Fallback
-          return const Center(child: Text('No hay datos disponibles'));
+          return const SizedBox();
         },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────
+// 📭 ESTADO VACÍO / ERROR
+// ─────────────────────────────
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       ),
     );
   }

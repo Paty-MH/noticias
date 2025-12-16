@@ -8,6 +8,8 @@ abstract class NewsState extends Equatable {
   List<Object?> get props => [];
 }
 
+// ================= BASE =================
+
 class NewsInitial extends NewsState {
   const NewsInitial();
 }
@@ -15,6 +17,8 @@ class NewsInitial extends NewsState {
 class NewsLoading extends NewsState {
   const NewsLoading();
 }
+
+// ================= HOME / POSTS =================
 
 class NewsLoaded extends NewsState {
   final List<Post> posts;
@@ -31,6 +35,8 @@ class NewsLoaded extends NewsState {
   List<Object?> get props => [posts, bookmarks, hasMore];
 }
 
+// ================= CATEGORIES =================
+
 class CategoriesLoaded extends NewsState {
   final List<Map<String, dynamic>> categories;
 
@@ -38,6 +44,18 @@ class CategoriesLoaded extends NewsState {
 
   @override
   List<Object?> get props => [categories];
+}
+
+// ================= SEARCH =================
+
+// 🔥 NUEVO → loading SOLO para search
+class SearchLoading extends NewsState {
+  const SearchLoading();
+}
+
+// 🔥 NUEVO → vacío SOLO para search
+class SearchEmpty extends NewsState {
+  const SearchEmpty();
 }
 
 class SearchLoaded extends NewsState {
@@ -50,6 +68,9 @@ class SearchLoaded extends NewsState {
   List<Object?> get props => [results, bookmarks];
 }
 
+// ================= EMPTY / ERROR =================
+
+// ⚠️ SOLO para Home y CategoryPosts
 class NewsEmpty extends NewsState {
   const NewsEmpty();
 }

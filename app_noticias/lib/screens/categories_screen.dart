@@ -18,42 +18,64 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   void initState() {
     super.initState();
 
-    // 🔥 Pedir categorías solo si no existen
+    // 🔥 Pedir categorías SOLO si aún no están cargadas
     final bloc = context.read<NewsBloc>();
     if (bloc.state is! CategoriesLoaded) {
-      bloc.add(FetchCategories());
+      bloc.add(const FetchCategories());
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Categorías'), centerTitle: true),
-      body: BlocBuilder<NewsBloc, NewsState>(
-        builder: (context, state) {
-          // 🔄 Loading
-          if (state is NewsInitial || state is NewsLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    final theme = Theme.of(context);
 
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+
+      // ─────────────────────────────
+      // 📚 APP BAR
+      // ─────────────────────────────
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        foregroundColor: Colors.black,
+        centerTitle: true,
+        title: const Text(
+          'Categorías',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+
+      // ─────────────────────────────
+      // 📦 BODY
+      // ─────────────────────────────
+      body: BlocBuilder<NewsBloc, NewsState>(
+        // ✅ SOLO escuchar estados de categorías
+        buildWhen: (_, state) =>
+            state is CategoriesLoaded || state is NewsError,
+
+        builder: (context, state) {
           // ❌ Error
           if (state is NewsError) {
-            return Center(child: Text(state.message));
+            return _EmptyState(
+              icon: Icons.error_outline,
+              title: 'Error',
+              subtitle: state.message,
+            );
           }
 
           // ✅ Categorías cargadas
           if (state is CategoriesLoaded) {
             if (state.categories.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No hay categorías',
-                  style: TextStyle(fontSize: 16),
-                ),
+              return const _EmptyState(
+                icon: Icons.category_outlined,
+                title: 'Sin categorías',
+                subtitle: 'No hay categorías disponibles',
               );
             }
 
             return GridView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,
@@ -61,17 +83,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 childAspectRatio: 1.4,
               ),
               itemCount: state.categories.length,
-              itemBuilder: (_, i) {
-                final cat = state.categories[i];
+              itemBuilder: (context, index) {
+                final cat = state.categories[index];
 
-                return GestureDetector(
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    // 🔥 pedir posts de la categoría
-                    context.read<NewsBloc>().add(
-                      FetchPostsByCategory(cat['id'], cat['name']),
-                    );
-
-                    // 🔥 navegar
+                    // 🚀 SOLO navegar (no dispares evento aquí)
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -84,24 +102,26 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   },
                   child: Container(
                     alignment: Alignment.center,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
                     child: Text(
                       cat['name'].toString().toUpperCase(),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.8,
+                        color: Colors.grey.shade800,
                       ),
                     ),
                   ),
@@ -110,9 +130,50 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             );
           }
 
-          // 🧼 Fallback seguro
-          return const Center(child: Text('No hay datos disponibles'));
+          // 🧼 Estado inicial / fallback
+          return const Center(child: CircularProgressIndicator(strokeWidth: 3));
         },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────
+// 📭 ESTADO VACÍO / ERROR
+// ─────────────────────────────
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       ),
     );
   }
