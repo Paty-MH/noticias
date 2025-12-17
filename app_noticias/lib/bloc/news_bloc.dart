@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'news_event.dart';
 import 'news_state.dart';
 import '../services/api_service.dart';
@@ -7,9 +8,11 @@ import '../helpers/constants.dart';
 
 class NewsBloc extends Bloc<NewsEvent, NewsState> {
   final ApiService api;
-  int _page = 1;
 
-  NewsBloc(this.api) : super(NewsInitial()) {
+  int _page = 1;
+  bool _isFetchingMore = false;
+
+  NewsBloc(this.api) : super(const NewsInitial()) {
     on<FetchInitialPosts>(_fetchInitial);
     on<FetchMorePosts>(_fetchMore);
     on<ToggleBookmark>(_toggleBookmark);
@@ -18,20 +21,23 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     on<FetchPostsByCategory>(_fetchByCategory);
   }
 
-  // ================= POSTS =================
+  // ================= HOME POSTS =================
 
   Future<void> _fetchInitial(
     FetchInitialPosts event,
     Emitter<NewsState> emit,
   ) async {
-    emit(NewsLoading());
+    emit(const NewsLoading());
+
+    _page = 1;
+    _isFetchingMore = false;
+
     try {
-      _page = 1;
       final posts = await api.fetchPosts(page: _page);
       final bookmarks = await BookmarkStorage.getBookmarkedIds();
 
       if (posts.isEmpty) {
-        emit(NewsEmpty());
+        emit(const NewsEmpty());
         return;
       }
 
@@ -48,10 +54,13 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
   }
 
   Future<void> _fetchMore(FetchMorePosts event, Emitter<NewsState> emit) async {
+    if (_isFetchingMore) return;
     if (state is! NewsLoaded) return;
-    final current = state as NewsLoaded;
 
+    final current = state as NewsLoaded;
     if (!current.hasMore) return;
+
+    _isFetchingMore = true;
 
     try {
       _page++;
@@ -65,8 +74,9 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
         ),
       );
     } catch (_) {
-      // No rompemos la UI si falla la paginación
       emit(current);
+    } finally {
+      _isFetchingMore = false;
     }
   }
 
@@ -102,13 +112,14 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
   // ================= SEARCH =================
 
   Future<void> _search(SearchPosts event, Emitter<NewsState> emit) async {
-    emit(NewsLoading());
+    emit(const SearchLoading());
+
     try {
       final results = await api.searchPosts(event.query);
       final bookmarks = await BookmarkStorage.getBookmarkedIds();
 
       if (results.isEmpty) {
-        emit(NewsEmpty());
+        emit(const SearchEmpty());
         return;
       }
 
@@ -119,31 +130,47 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
   }
 
   // ================= CATEGORIES =================
-  // 🚨 NO emitimos NewsLoading aquí para no romper Home
+  // 🔥 SOLO categorías con noticias (count > 0)
 
   Future<void> _fetchCategories(
     FetchCategories event,
     Emitter<NewsState> emit,
   ) async {
     try {
-      final cats = await api.fetchCategories();
-      emit(CategoriesLoaded(cats));
+      final categories = await api.fetchCategories();
+
+      final filtered = categories
+          .where(
+            (cat) =>
+                cat['count'] != null &&
+                cat['count'] > 0 &&
+                cat['name'] != 'Uncategorized',
+          )
+          .toList();
+
+      // 🔥 ordenar por más noticias
+      filtered.sort((a, b) => b['count'].compareTo(a['count']));
+
+      emit(CategoriesLoaded(filtered));
     } catch (_) {
       emit(const NewsError('Error al cargar categorías'));
     }
   }
 
+  // ================= POSTS BY CATEGORY =================
+
   Future<void> _fetchByCategory(
     FetchPostsByCategory event,
     Emitter<NewsState> emit,
   ) async {
-    emit(NewsLoading());
+    emit(const NewsLoading());
+
     try {
       final posts = await api.fetchPostsByCategory(event.categoryId);
       final bookmarks = await BookmarkStorage.getBookmarkedIds();
 
       if (posts.isEmpty) {
-        emit(NewsEmpty());
+        emit(const NewsEmpty());
         return;
       }
 

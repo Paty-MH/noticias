@@ -7,6 +7,15 @@ import '../bloc/news_state.dart';
 import '../components/post_card.dart';
 import 'post_detail_screen.dart';
 
+/// 🔥 Categorías detectables (palabras clave)
+const Map<String, int> categoryMap = {
+  'futbol': 5,
+  'deportes': 5,
+  'tecnologia': 3,
+  'salud': 7,
+  'politica': 2,
+};
+
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -24,23 +33,37 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  // 🔥 LIMPIAR BUSCADOR
+  // 🧼 LIMPIAR BUSCADOR
   void _clearSearch() {
     _controller.clear();
-    setState(() {
-      _hasSearched = false;
-    });
+    setState(() => _hasSearched = false);
+    context.read<NewsBloc>().add(const FetchInitialPosts());
   }
 
-  // 🔍 BUSCAR
-  void _doSearch(String q) {
-    final query = q.trim();
-    if (query.isEmpty) return;
+  // 🔍 BUSCAR DESDE 2 LETRAS + COINCIDENCIA PARCIAL
+  void _search(String value) {
+    final query = value.trim().toLowerCase();
 
-    setState(() {
-      _hasSearched = true;
-    });
+    // ⛔ Menos de 2 letras → no buscar
+    if (query.length < 2) {
+      setState(() => _hasSearched = false);
+      return;
+    }
 
+    setState(() => _hasSearched = true);
+
+    // 🔥 Detectar categoría por coincidencia parcial
+    final matchedCategory = categoryMap.entries.firstWhere(
+      (entry) => entry.key.contains(query),
+      orElse: () => const MapEntry('', -1),
+    );
+
+    if (matchedCategory.value != -1) {
+      context.read<NewsBloc>().add(FetchPostsByCategory(matchedCategory.value));
+      return;
+    }
+
+    // 🔎 Búsqueda normal (texto parcial)
     context.read<NewsBloc>().add(SearchPosts(query));
   }
 
@@ -48,133 +71,183 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      children: [
-        // ─────────────────────────────
-        // 🔎 BUSCADOR
-        // ─────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 32, 16, 8),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: TextField(
-              controller: _controller,
-              textInputAction: TextInputAction.search,
-              onSubmitted: _doSearch,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Buscar noticias...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: _clearSearch,
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 20,
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ───────────── HEADER ─────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.primaryColor,
+                    theme.primaryColor.withOpacity(0.85),
+                  ],
                 ),
               ),
-            ),
-          ),
-        ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Buscar noticias',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-        // ─────────────────────────────
-        // 📃 RESULTADOS
-        // ─────────────────────────────
-        Expanded(
-          child: BlocBuilder<NewsBloc, NewsState>(
-            buildWhen: (_, state) =>
-                state is NewsLoading ||
-                state is SearchLoaded ||
-                state is NewsError,
-
-            builder: (_, state) {
-              // ⏳ Loading SOLO después de buscar
-              if (state is NewsLoading && _hasSearched) {
-                return const Center(
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                );
-              }
-
-              // ❌ Error
-              if (state is NewsError) {
-                return _EmptyState(
-                  icon: Icons.error_outline,
-                  title: 'Ocurrió un error',
-                  subtitle: state.message,
-                );
-              }
-
-              // ✅ Resultados
-              if (state is SearchLoaded) {
-                if (state.results.isEmpty) {
-                  return const _EmptyState(
-                    icon: Icons.search_off,
-                    title: 'Sin resultados',
-                    subtitle: 'Intenta con otra palabra',
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: state.results.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) {
-                    final post = state.results[i];
-                    final bookmarked = state.bookmarks.contains(post.id);
-
-                    return PostCard(
-                      post: post,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PostDetailScreen(post: post),
+                  // 🔎 BUSCADOR
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _controller,
+                      onChanged: _search, // 🔥 BÚSQUEDA EN TIEMPO REAL
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'Buscar noticias.....',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _controller.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: _clearSearch,
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 20,
                         ),
                       ),
-                      trailing: IconButton(
-                        icon: Icon(
-                          bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                          color: bookmarked ? theme.primaryColor : Colors.grey,
+                    ),
+                  ),
+
+                  // 🔥 CHIPS DE CATEGORÍAS
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    children: categoryMap.keys.take(5).map((cat) {
+                      return ActionChip(
+                        backgroundColor: Colors.white.withOpacity(0.25),
+                        label: Text(
+                          cat,
+                          style: const TextStyle(color: Colors.white),
                         ),
                         onPressed: () {
-                          context.read<NewsBloc>().add(ToggleBookmark(post));
+                          _controller.text = cat;
+                          _search(cat);
                         },
-                      ),
-                    );
-                  },
-                );
-              }
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
 
-              // 🔍 Estado inicial
-              return const _EmptyState(
-                icon: Icons.search,
-                title: 'Busca una noticia',
-                subtitle: 'Escribe una palabra clave arriba',
-              );
-            },
-          ),
+            // ───────────── RESULTADOS ─────────────
+            Expanded(
+              child: BlocBuilder<NewsBloc, NewsState>(
+                buildWhen: (_, state) =>
+                    state is NewsLoading ||
+                    state is NewsLoaded ||
+                    state is SearchLoaded ||
+                    state is NewsError ||
+                    state is NewsEmpty,
+                builder: (_, state) {
+                  if (state is NewsLoading && _hasSearched) {
+                    return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    );
+                  }
+
+                  if (state is NewsError) {
+                    return _EmptyState(
+                      icon: Icons.error_outline,
+                      title: 'Error',
+                      subtitle: state.message,
+                    );
+                  }
+
+                  if (state is SearchLoaded || state is NewsLoaded) {
+                    final posts = state is SearchLoaded
+                        ? state.results
+                        : (state as NewsLoaded).posts;
+
+                    final bookmarks = state is SearchLoaded
+                        ? state.bookmarks
+                        : (state as NewsLoaded).bookmarks;
+
+                    if (posts.isEmpty) {
+                      return const _EmptyState(
+                        icon: Icons.search_off,
+                        title: 'Sin resultados',
+                        subtitle: 'Prueba con otra palabra',
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: posts.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) {
+                        final post = posts[i];
+                        final bookmarked = bookmarks.contains(post.id);
+
+                        return PostCard(
+                          post: post,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PostDetailScreen(post: post),
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(
+                              bookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: bookmarked
+                                  ? theme.primaryColor
+                                  : Colors.grey,
+                            ),
+                            onPressed: () {
+                              context.read<NewsBloc>().add(
+                                ToggleBookmark(post),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  return const _EmptyState(
+                    icon: Icons.search,
+                    title: 'Busca noticias',
+                    subtitle: 'Escribe al menos 2 letras',
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-// ─────────────────────────────
-// 📭 WIDGET DE ESTADO VACÍO
-// ─────────────────────────────
+// ───────────── EMPTY STATE ─────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;

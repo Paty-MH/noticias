@@ -8,7 +8,7 @@ abstract class NewsEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// ================= POSTS (HOME) =================
+// ================= HOME POSTS =================
 
 class FetchInitialPosts extends NewsEvent {
   const FetchInitialPosts();

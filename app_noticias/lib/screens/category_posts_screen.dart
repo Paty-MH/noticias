@@ -22,27 +22,22 @@ class CategoryPostsScreen extends StatefulWidget {
 }
 
 class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
-  bool _loaded = false;
-
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void initState() {
+    super.initState();
 
-    // 🔐 Pedir posts SOLO una vez
-    if (!_loaded) {
-      context.read<NewsBloc>().add(
-        FetchPostsByCategory(widget.categoryId), // ✅ CORRECTO
-      );
-      _loaded = true;
-    }
+    // ✅ Cargar posts de la categoría al entrar
+    context.read<NewsBloc>().add(FetchPostsByCategory(widget.categoryId));
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.categoryName), centerTitle: true),
+
       body: BlocBuilder<NewsBloc, NewsState>(
-        // 🔑 Escuchar SOLO estados de posts
         buildWhen: (_, state) =>
             state is NewsLoading ||
             state is NewsLoaded ||
@@ -50,7 +45,7 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
             state is NewsError,
 
         builder: (context, state) {
-          // ⏳ Loading SOLO de categoría
+          // ⏳ Loading
           if (state is NewsLoading) {
             return const Center(
               child: CircularProgressIndicator(strokeWidth: 3),
@@ -59,26 +54,28 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
 
           // ❌ Error
           if (state is NewsError) {
-            return Center(
-              child: Text(state.message, style: const TextStyle(fontSize: 16)),
+            return _EmptyState(
+              icon: Icons.error_outline,
+              title: 'Error',
+              subtitle: state.message,
             );
           }
 
           // 🚫 Sin posts
           if (state is NewsEmpty) {
-            return const Center(
-              child: Text(
-                'No hay noticias en esta categoría',
-                style: TextStyle(fontSize: 16),
-              ),
+            return const _EmptyState(
+              icon: Icons.newspaper_outlined,
+              title: 'Sin noticias',
+              subtitle: 'No hay noticias en esta categoría',
             );
           }
 
           // ✅ Posts cargados
           if (state is NewsLoaded) {
-            return ListView.builder(
+            return ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: state.posts.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (_, i) {
                 final post = state.posts[i];
                 final bookmarked = state.bookmarks.contains(post.id);
@@ -96,6 +93,7 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
                   trailing: IconButton(
                     icon: Icon(
                       bookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      color: bookmarked ? theme.primaryColor : Colors.grey,
                     ),
                     onPressed: () {
                       context.read<NewsBloc>().add(ToggleBookmark(post));
@@ -106,9 +104,49 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
             );
           }
 
-          // 🧼 Fallback seguro
           return const SizedBox();
         },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────
+// 📭 EMPTY STATE
+// ─────────────────────────────
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
+        ),
       ),
     );
   }

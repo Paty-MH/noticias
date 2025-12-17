@@ -48,12 +48,10 @@ class CategoriesLoaded extends NewsState {
 
 // ================= SEARCH =================
 
-// 🔥 NUEVO → loading SOLO para search
 class SearchLoading extends NewsState {
   const SearchLoading();
 }
 
-// 🔥 NUEVO → vacío SOLO para search
 class SearchEmpty extends NewsState {
   const SearchEmpty();
 }
@@ -70,7 +68,6 @@ class SearchLoaded extends NewsState {
 
 // ================= EMPTY / ERROR =================
 
-// ⚠️ SOLO para Home y CategoryPosts
 class NewsEmpty extends NewsState {
   const NewsEmpty();
 }

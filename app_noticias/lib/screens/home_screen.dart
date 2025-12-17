@@ -15,7 +15,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ScrollController _scroll = ScrollController();
+  final ScrollController _scrollController = ScrollController();
+  bool _hasRequestedMore = false;
 
   @override
   void initState() {
@@ -23,19 +24,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 🔥 Cargar noticias al entrar
     context.read<NewsBloc>().add(const FetchInitialPosts());
-    _scroll.addListener(_onScroll);
+    _scrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
-    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 300) {
+    if (!_scrollController.hasClients) return;
+
+    final max = _scrollController.position.maxScrollExtent;
+    final current = _scrollController.position.pixels;
+
+    // 🔥 Cuando falten 250px para el final
+    if (current >= max - 250 && !_hasRequestedMore) {
+      _hasRequestedMore = true;
       context.read<NewsBloc>().add(const FetchMorePosts());
     }
   }
 
   @override
   void dispose() {
-    _scroll.removeListener(_onScroll);
-    _scroll.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -47,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.grey.shade100,
 
       // ─────────────────────────────
-      // 📰 APP BAR SUAVE
+      // 📰 APP BAR
       // ─────────────────────────────
       appBar: AppBar(
         elevation: 0,
@@ -59,9 +67,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      body: BlocBuilder<NewsBloc, NewsState>(
+      body: BlocConsumer<NewsBloc, NewsState>(
+        listener: (context, state) {
+          // 🔄 Permitir nueva carga cuando llegan más posts
+          if (state is NewsLoaded) {
+            _hasRequestedMore = false;
+          }
+        },
         builder: (context, state) {
-          // ⏳ Initial / Loading
+          // ⏳ Loading inicial
           if (state is NewsInitial || state is NewsLoading) {
             return const Center(
               child: CircularProgressIndicator(strokeWidth: 3),
@@ -77,23 +91,24 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // ✅ Loaded
-          if (state is NewsLoaded) {
-            if (state.posts.isEmpty) {
-              return const _EmptyState(
-                icon: Icons.article_outlined,
-                title: 'Sin noticias',
-                subtitle: 'No hay contenido disponible por ahora',
-              );
-            }
+          // 🚫 Sin posts
+          if (state is NewsEmpty) {
+            return const _EmptyState(
+              icon: Icons.article_outlined,
+              title: 'Sin noticias',
+              subtitle: 'No hay contenido disponible por ahora',
+            );
+          }
 
+          // ✅ Noticias cargadas
+          if (state is NewsLoaded) {
             return RefreshIndicator(
               color: theme.primaryColor,
               onRefresh: () async {
                 context.read<NewsBloc>().add(const FetchInitialPosts());
               },
               child: ListView.builder(
-                controller: _scroll,
+                controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
                 itemCount: state.posts.length + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
