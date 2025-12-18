@@ -1,6 +1,9 @@
 import 'package:equatable/equatable.dart';
 import '../models/post_model.dart';
 
+/// ─────────────────────────────
+/// BASE STATE
+/// ─────────────────────────────
 abstract class NewsState extends Equatable {
   const NewsState();
 
@@ -8,7 +11,9 @@ abstract class NewsState extends Equatable {
   List<Object?> get props => [];
 }
 
-// ================= BASE =================
+/// ─────────────────────────────
+/// ⏳ INITIAL / LOADING
+/// ─────────────────────────────
 
 class NewsInitial extends NewsState {
   const NewsInitial();
@@ -18,7 +23,9 @@ class NewsLoading extends NewsState {
   const NewsLoading();
 }
 
-// ================= HOME / POSTS =================
+/// ─────────────────────────────
+/// 📰 HOME / POSTS
+/// ─────────────────────────────
 
 class NewsLoaded extends NewsState {
   final List<Post> posts;
@@ -35,7 +42,9 @@ class NewsLoaded extends NewsState {
   List<Object?> get props => [posts, bookmarks, hasMore];
 }
 
-// ================= CATEGORIES =================
+/// ─────────────────────────────
+/// 📂 CATEGORIES
+/// ─────────────────────────────
 
 class CategoriesLoaded extends NewsState {
   final List<Map<String, dynamic>> categories;
@@ -46,16 +55,20 @@ class CategoriesLoaded extends NewsState {
   List<Object?> get props => [categories];
 }
 
-// ================= SEARCH =================
+/// ─────────────────────────────
+/// 🔍 SEARCH
+/// ─────────────────────────────
 
 class SearchLoading extends NewsState {
   const SearchLoading();
 }
 
+/// 👉 Cuando NO hay resultados
 class SearchEmpty extends NewsState {
   const SearchEmpty();
 }
 
+/// 👉 Resultados encontrados
 class SearchLoaded extends NewsState {
   final List<Post> results;
   final List<int> bookmarks;
@@ -66,8 +79,11 @@ class SearchLoaded extends NewsState {
   List<Object?> get props => [results, bookmarks];
 }
 
-// ================= EMPTY / ERROR =================
+/// ─────────────────────────────
+/// 📭 EMPTY / ❌ ERROR
+/// ─────────────────────────────
 
+/// 👉 Home sin noticias
 class NewsEmpty extends NewsState {
   const NewsEmpty();
 }

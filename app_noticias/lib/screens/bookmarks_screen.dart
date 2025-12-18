@@ -18,9 +18,6 @@ class BookmarksScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
 
-      // ─────────────────────────────
-      // 🔖 APP BAR
-      // ─────────────────────────────
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -32,9 +29,12 @@ class BookmarksScreen extends StatelessWidget {
       ),
 
       body: BlocBuilder<NewsBloc, NewsState>(
+        buildWhen: (_, state) =>
+            state is NewsLoaded || state is NewsLoading || state is NewsError,
+
         builder: (context, state) {
-          // 🔄 Loading
-          if (state is NewsInitial || state is NewsLoading) {
+          // ⏳ Loading
+          if (state is NewsLoading || state is NewsInitial) {
             return const Center(
               child: CircularProgressIndicator(strokeWidth: 3),
             );
@@ -49,14 +49,12 @@ class BookmarksScreen extends StatelessWidget {
             );
           }
 
-          // ✅ Posts cargados
+          // ✅ Datos cargados
           if (state is NewsLoaded) {
-            final List<Post> bookmarkedPosts = state.posts
-                .where((post) => state.bookmarks.contains(post.id))
-                .toList();
+            final bookmarkedIds = state.bookmarks;
 
-            // 📭 Empty
-            if (bookmarkedPosts.isEmpty) {
+            // 📭 Sin guardados
+            if (bookmarkedIds.isEmpty) {
               return const _EmptyState(
                 icon: Icons.bookmark_border,
                 title: 'Sin guardados',
@@ -64,7 +62,20 @@ class BookmarksScreen extends StatelessWidget {
               );
             }
 
-            // 📋 Listado
+            // ⚠️ IMPORTANTE:
+            // Solo mostrar posts disponibles en memoria
+            final List<Post> bookmarkedPosts = state.posts
+                .where((p) => bookmarkedIds.contains(p.id))
+                .toList();
+
+            if (bookmarkedPosts.isEmpty) {
+              return const _EmptyState(
+                icon: Icons.bookmark_remove_outlined,
+                title: 'Guardados no disponibles',
+                subtitle: 'Algunas noticias guardadas ya no están cargadas',
+              );
+            }
+
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
               itemCount: bookmarkedPosts.length,

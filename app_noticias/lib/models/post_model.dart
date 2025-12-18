@@ -1,4 +1,6 @@
-class Post {
+import 'package:equatable/equatable.dart';
+
+class Post extends Equatable {
   final int id;
   final String title;
   final String excerpt;
@@ -7,7 +9,7 @@ class Post {
   final List<int> categories;
   final String? featuredImage;
 
-  Post({
+  const Post({
     required this.id,
     required this.title,
     required this.excerpt,
@@ -18,7 +20,6 @@ class Post {
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
-    // title.rendered, excerpt.rendered, content.rendered
     String? img;
     try {
       if (json['_embedded'] != null &&
@@ -26,7 +27,7 @@ class Post {
           (json['_embedded']['wp:featuredmedia'] as List).isNotEmpty) {
         img = json['_embedded']['wp:featuredmedia'][0]['source_url'];
       }
-    } catch (e) {
+    } catch (_) {
       img = null;
     }
 
@@ -54,4 +55,7 @@ class Post {
       'featuredImage': featuredImage,
     };
   }
+
+  @override
+  List<Object?> get props => [id];
 }

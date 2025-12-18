@@ -1,6 +1,9 @@
 import 'package:equatable/equatable.dart';
 import '../models/post_model.dart';
 
+/// ─────────────────────────────
+/// BASE EVENT
+/// ─────────────────────────────
 abstract class NewsEvent extends Equatable {
   const NewsEvent();
 
@@ -8,17 +11,23 @@ abstract class NewsEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// ================= HOME POSTS =================
+/// ─────────────────────────────
+/// 📰 HOME / POSTS
+/// ─────────────────────────────
 
+/// Carga inicial de noticias
 class FetchInitialPosts extends NewsEvent {
   const FetchInitialPosts();
 }
 
+/// Carga más noticias (infinite scroll)
 class FetchMorePosts extends NewsEvent {
   const FetchMorePosts();
 }
 
-// ================= BOOKMARK =================
+/// ─────────────────────────────
+/// 🔖 BOOKMARKS
+/// ─────────────────────────────
 
 class ToggleBookmark extends NewsEvent {
   final Post post;
@@ -29,7 +38,9 @@ class ToggleBookmark extends NewsEvent {
   List<Object?> get props => [post];
 }
 
-// ================= SEARCH =================
+/// ─────────────────────────────
+/// 🔍 SEARCH
+/// ─────────────────────────────
 
 class SearchPosts extends NewsEvent {
   final String query;
@@ -40,7 +51,9 @@ class SearchPosts extends NewsEvent {
   List<Object?> get props => [query];
 }
 
-// ================= CATEGORIES =================
+/// ─────────────────────────────
+/// 📂 CATEGORIES
+/// ─────────────────────────────
 
 class FetchCategories extends NewsEvent {
   const FetchCategories();
