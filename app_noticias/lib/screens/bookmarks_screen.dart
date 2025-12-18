@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../bloc/news_bloc.dart';
 import '../bloc/news_state.dart';
 import '../bloc/news_event.dart';
@@ -18,7 +19,7 @@ class BookmarksScreen extends StatelessWidget {
       backgroundColor: Colors.grey.shade100,
 
       // ─────────────────────────────
-      // 🔖 APP BAR SUAVE
+      // 🔖 APP BAR
       // ─────────────────────────────
       appBar: AppBar(
         elevation: 0,
@@ -73,24 +74,23 @@ class BookmarksScreen extends StatelessWidget {
 
                 return PostCard(
                   post: post,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PostDetailScreen(post: post),
-                    ),
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(Icons.bookmark, color: theme.primaryColor),
-                    onPressed: () {
-                      context.read<NewsBloc>().add(ToggleBookmark(post));
-                    },
-                  ),
+                  isBookmarked: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PostDetailScreen(post: post),
+                      ),
+                    );
+                  },
+                  onBookmark: () {
+                    context.read<NewsBloc>().add(ToggleBookmark(post));
+                  },
                 );
               },
             );
           }
 
-          // 🧼 Fallback
           return const SizedBox();
         },
       ),
@@ -99,7 +99,7 @@ class BookmarksScreen extends StatelessWidget {
 }
 
 // ─────────────────────────────
-// 📭 ESTADO VACÍO / ERROR
+// 📭 EMPTY STATE
 // ─────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;

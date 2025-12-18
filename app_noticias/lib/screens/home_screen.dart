@@ -16,67 +16,59 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _hasRequestedMore = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 🔥 Cargar noticias al entrar
+    // 🔥 Cargar noticias iniciales
     context.read<NewsBloc>().add(const FetchInitialPosts());
+
     _scrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
-    final max = _scrollController.position.maxScrollExtent;
-    final current = _scrollController.position.pixels;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
 
-    // 🔥 Cuando falten 250px para el final
-    if (current >= max - 250 && !_hasRequestedMore) {
-      _hasRequestedMore = true;
-      context.read<NewsBloc>().add(const FetchMorePosts());
+    // ⬇️ cuando llega al 80% del scroll
+    if (currentScroll >= maxScroll * 0.8) {
+      final bloc = context.read<NewsBloc>();
+      final state = bloc.state;
+
+      if (state is NewsLoaded && state.hasMore) {
+        bloc.add(const FetchMorePosts());
+      }
     }
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-
-      // ─────────────────────────────
-      // 📰 APP BAR
-      // ─────────────────────────────
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: Colors.black,
         title: const Text(
           'Noticias',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
-      body: BlocConsumer<NewsBloc, NewsState>(
-        listener: (context, state) {
-          // 🔄 Permitir nueva carga cuando llegan más posts
-          if (state is NewsLoaded) {
-            _hasRequestedMore = false;
-          }
-        },
+      body: BlocBuilder<NewsBloc, NewsState>(
+        buildWhen: (_, state) =>
+            state is NewsLoading ||
+            state is NewsLoaded ||
+            state is NewsEmpty ||
+            state is NewsError,
         builder: (context, state) {
           // ⏳ Loading inicial
-          if (state is NewsInitial || state is NewsLoading) {
+          if (state is NewsLoading) {
             return const Center(
               child: CircularProgressIndicator(strokeWidth: 3),
             );
@@ -86,72 +78,79 @@ class _HomeScreenState extends State<HomeScreen> {
           if (state is NewsError) {
             return _EmptyState(
               icon: Icons.error_outline,
-              title: 'Algo salió mal',
+              title: 'Error',
               subtitle: state.message,
             );
           }
 
-          // 🚫 Sin posts
+          // 📭 Sin noticias
           if (state is NewsEmpty) {
             return const _EmptyState(
-              icon: Icons.article_outlined,
+              icon: Icons.newspaper_outlined,
               title: 'Sin noticias',
-              subtitle: 'No hay contenido disponible por ahora',
+              subtitle: 'No hay noticias disponibles',
             );
           }
 
           // ✅ Noticias cargadas
           if (state is NewsLoaded) {
-            return RefreshIndicator(
-              color: theme.primaryColor,
-              onRefresh: () async {
-                context.read<NewsBloc>().add(const FetchInitialPosts());
-              },
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
-                itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  // 🔄 Loader paginación
-                  if (index == state.posts.length) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    );
-                  }
+            return Column(
+              children: [
+                // ───────── LISTA ─────────
+                Expanded(
+                  child: ListView.separated(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
 
-                  final post = state.posts[index];
-                  final isBookmarked = state.bookmarks.contains(post.id);
+                    // 🔥 FIX CLAVE
+                    itemCount: state.posts.length + (state.hasMore ? 1 : 0),
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: PostCard(
-                      post: post,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PostDetailScreen(post: post),
-                          ),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+
+                    itemBuilder: (context, index) {
+                      // ───────── POSTS ─────────
+                      if (index < state.posts.length) {
+                        final post = state.posts[index];
+                        final isBookmarked = state.bookmarks.contains(post.id);
+
+                        return PostCard(
+                          post: post,
+                          isBookmarked: isBookmarked,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PostDetailScreen(post: post),
+                              ),
+                            );
+                          },
+                          onBookmark: () {
+                            context.read<NewsBloc>().add(ToggleBookmark(post));
+                          },
                         );
-                      },
-                      trailing: IconButton(
-                        icon: Icon(
-                          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                          color: isBookmarked
-                              ? theme.primaryColor
-                              : Colors.grey,
+                      }
+
+                      // ───────── LOADER (solo si hasMore) ─────────
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        onPressed: () {
-                          context.read<NewsBloc>().add(ToggleBookmark(post));
-                        },
-                      ),
+                      );
+                    },
+                  ),
+                ),
+
+                // ───────── FOOTER FINAL ─────────
+                if (!state.hasMore)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      '📰 Ya no hay más noticias',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                  );
-                },
-              ),
+                  ),
+              ],
             );
           }
 
@@ -163,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ─────────────────────────────
-// 📭 ESTADO VACÍO / ERROR
+// 📭 EMPTY STATE
 // ─────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;

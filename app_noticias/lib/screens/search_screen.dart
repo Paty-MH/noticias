@@ -7,15 +7,6 @@ import '../bloc/news_state.dart';
 import '../components/post_card.dart';
 import 'post_detail_screen.dart';
 
-/// 🔥 Categorías detectables (palabras clave)
-const Map<String, int> categoryMap = {
-  'futbol': 5,
-  'deportes': 5,
-  'tecnologia': 3,
-  'salud': 7,
-  'politica': 2,
-};
-
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -23,7 +14,8 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   bool _hasSearched = false;
 
@@ -33,227 +25,196 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  // 🧼 LIMPIAR BUSCADOR
-  void _clearSearch() {
-    _controller.clear();
-    setState(() => _hasSearched = false);
-    context.read<NewsBloc>().add(const FetchInitialPosts());
-  }
-
-  // 🔍 BUSCAR DESDE 2 LETRAS + COINCIDENCIA PARCIAL
   void _search(String value) {
-    final query = value.trim().toLowerCase();
+    final query = value.trim();
 
-    // ⛔ Menos de 2 letras → no buscar
     if (query.length < 2) {
       setState(() => _hasSearched = false);
       return;
     }
 
     setState(() => _hasSearched = true);
-
-    // 🔥 Detectar categoría por coincidencia parcial
-    final matchedCategory = categoryMap.entries.firstWhere(
-      (entry) => entry.key.contains(query),
-      orElse: () => const MapEntry('', -1),
-    );
-
-    if (matchedCategory.value != -1) {
-      context.read<NewsBloc>().add(FetchPostsByCategory(matchedCategory.value));
-      return;
-    }
-
-    // 🔎 Búsqueda normal (texto parcial)
     context.read<NewsBloc>().add(SearchPosts(query));
+  }
+
+  void _clear() {
+    _controller.clear();
+    setState(() => _hasSearched = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ───────────── HEADER ─────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.primaryColor,
-                    theme.primaryColor.withOpacity(0.85),
-                  ],
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Buscar noticias',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+      body: Stack(
+        children: [
+          // 🖼 FONDO
+          Positioned.fill(
+            child: Image.asset('assets/images/news_bg.png', fit: BoxFit.cover),
+          ),
 
-                  // 🔎 BUSCADOR
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 12,
+          // OSCURECER FONDO
+          Positioned.fill(
+            child: Container(color: Colors.black.withOpacity(0.45)),
+          ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                // 🔍 BUSCADOR
+                AnimatedPadding(
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.only(
+                    top: _hasSearched
+                        ? 20
+                        : MediaQuery.of(context).size.height * 0.30,
+                    left: 20,
+                    right: 20,
+                  ),
+                  child: _SearchBar(
+                    controller: _controller,
+                    onChanged: _search,
+                    onClear: _clear,
+                  ),
+                ),
+
+                // 📰 RESULTADOS
+                if (_hasSearched)
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(28),
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _controller,
-                      onChanged: _search, // 🔥 BÚSQUEDA EN TIEMPO REAL
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'Buscar noticias.....',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _controller.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: _clearSearch,
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 20,
-                        ),
+                      ),
+                      child: BlocBuilder<NewsBloc, NewsState>(
+                        buildWhen: (_, state) =>
+                            state is SearchLoading ||
+                            state is SearchLoaded ||
+                            state is SearchEmpty ||
+                            state is NewsError,
+                        builder: (context, state) {
+                          // ⏳ Cargando
+                          if (state is SearchLoading) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          // ❌ Error
+                          if (state is NewsError) {
+                            return _SearchEmpty(
+                              icon: Icons.error_outline,
+                              title: 'Error',
+                              subtitle: state.message,
+                            );
+                          }
+
+                          // 🔍 NO ENCONTRADO
+                          if (state is SearchEmpty) {
+                            return const _SearchEmpty(
+                              icon: Icons.search_off,
+                              title: 'Noticia no encontrada',
+                              subtitle:
+                                  'Intenta con otras palabras o revisa la ortografía',
+                            );
+                          }
+
+                          // ✅ RESULTADOS
+                          if (state is SearchLoaded) {
+                            return ListView.separated(
+                              padding: const EdgeInsets.all(12),
+                              itemCount: state.results.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, i) {
+                                final post = state.results[i];
+                                final bookmarked = state.bookmarks.contains(
+                                  post.id,
+                                );
+
+                                return PostCard(
+                                  post: post,
+                                  isBookmarked: bookmarked,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            PostDetailScreen(post: post),
+                                      ),
+                                    );
+                                  },
+                                  onBookmark: () {
+                                    context.read<NewsBloc>().add(
+                                      ToggleBookmark(post),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          }
+
+                          return const SizedBox();
+                        },
                       ),
                     ),
                   ),
-
-                  // 🔥 CHIPS DE CATEGORÍAS
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    children: categoryMap.keys.take(5).map((cat) {
-                      return ActionChip(
-                        backgroundColor: Colors.white.withOpacity(0.25),
-                        label: Text(
-                          cat,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        onPressed: () {
-                          _controller.text = cat;
-                          _search(cat);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-            // ───────────── RESULTADOS ─────────────
-            Expanded(
-              child: BlocBuilder<NewsBloc, NewsState>(
-                buildWhen: (_, state) =>
-                    state is NewsLoading ||
-                    state is NewsLoaded ||
-                    state is SearchLoaded ||
-                    state is NewsError ||
-                    state is NewsEmpty,
-                builder: (_, state) {
-                  if (state is NewsLoading && _hasSearched) {
-                    return const Center(
-                      child: CircularProgressIndicator(strokeWidth: 3),
-                    );
-                  }
+// ───────── SEARCH BAR ─────────
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
-                  if (state is NewsError) {
-                    return _EmptyState(
-                      icon: Icons.error_outline,
-                      title: 'Error',
-                      subtitle: state.message,
-                    );
-                  }
+  const _SearchBar({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
 
-                  if (state is SearchLoaded || state is NewsLoaded) {
-                    final posts = state is SearchLoaded
-                        ? state.results
-                        : (state as NewsLoaded).posts;
-
-                    final bookmarks = state is SearchLoaded
-                        ? state.bookmarks
-                        : (state as NewsLoaded).bookmarks;
-
-                    if (posts.isEmpty) {
-                      return const _EmptyState(
-                        icon: Icons.search_off,
-                        title: 'Sin resultados',
-                        subtitle: 'Prueba con otra palabra',
-                      );
-                    }
-
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: posts.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (_, i) {
-                        final post = posts[i];
-                        final bookmarked = bookmarks.contains(post.id);
-
-                        return PostCard(
-                          post: post,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PostDetailScreen(post: post),
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              bookmarked
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_border,
-                              color: bookmarked
-                                  ? theme.primaryColor
-                                  : Colors.grey,
-                            ),
-                            onPressed: () {
-                              context.read<NewsBloc>().add(
-                                ToggleBookmark(post),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  }
-
-                  return const _EmptyState(
-                    icon: Icons.search,
-                    title: 'Busca noticias',
-                    subtitle: 'Escribe al menos 2 letras',
-                  );
-                },
-              ),
-            ),
-          ],
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 10,
+      borderRadius: BorderRadius.circular(30),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          hintText: 'Buscar noticias...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: controller.text.isNotEmpty
+              ? IconButton(icon: const Icon(Icons.close), onPressed: onClear)
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 22,
+            vertical: 18,
+          ),
         ),
       ),
     );
   }
 }
 
-// ───────────── EMPTY STATE ─────────────
-class _EmptyState extends StatelessWidget {
+// ───────── EMPTY SEARCH ─────────
+class _SearchEmpty extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
 
-  const _EmptyState({
+  const _SearchEmpty({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -267,7 +228,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey),
+            Icon(icon, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               title,
@@ -277,7 +238,7 @@ class _EmptyState extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey.shade600),
             ),
           ],
         ),

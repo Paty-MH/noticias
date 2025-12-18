@@ -21,7 +21,9 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     on<FetchPostsByCategory>(_fetchByCategory);
   }
 
-  // ================= HOME POSTS =================
+  // ─────────────────────────────
+  // 📰 HOME / POSTS
+  // ─────────────────────────────
 
   Future<void> _fetchInitial(
     FetchInitialPosts event,
@@ -48,7 +50,7 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
           hasMore: posts.length == Constants.perPage,
         ),
       );
-    } catch (_) {
+    } catch (e) {
       emit(const NewsError('No se pudieron cargar las noticias'));
     }
   }
@@ -58,13 +60,30 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     if (state is! NewsLoaded) return;
 
     final current = state as NewsLoaded;
+
+    // 🚫 Ya no hay más noticias
     if (!current.hasMore) return;
 
     _isFetchingMore = true;
 
     try {
-      _page++;
-      final more = await api.fetchPosts(page: _page);
+      final nextPage = _page + 1;
+      final more = await api.fetchPosts(page: nextPage);
+
+      // 🚫 API ya no devuelve más datos
+      if (more.isEmpty) {
+        emit(
+          NewsLoaded(
+            posts: current.posts,
+            bookmarks: current.bookmarks,
+            hasMore: false,
+          ),
+        );
+        return;
+      }
+
+      // ✅ Avanzar página SOLO si hubo resultados
+      _page = nextPage;
 
       emit(
         NewsLoaded(
@@ -74,13 +93,15 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
         ),
       );
     } catch (_) {
-      emit(current);
+      emit(current); // mantener estado anterior
     } finally {
       _isFetchingMore = false;
     }
   }
 
-  // ================= BOOKMARK =================
+  // ─────────────────────────────
+  // 🔖 BOOKMARKS
+  // ─────────────────────────────
 
   Future<void> _toggleBookmark(
     ToggleBookmark event,
@@ -109,7 +130,9 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     }
   }
 
-  // ================= SEARCH =================
+  // ─────────────────────────────
+  // 🔍 SEARCH
+  // ─────────────────────────────
 
   Future<void> _search(SearchPosts event, Emitter<NewsState> emit) async {
     emit(const SearchLoading());
@@ -129,8 +152,9 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     }
   }
 
-  // ================= CATEGORIES =================
-  // 🔥 SOLO categorías con noticias (count > 0)
+  // ─────────────────────────────
+  // 📂 CATEGORIES
+  // ─────────────────────────────
 
   Future<void> _fetchCategories(
     FetchCategories event,
@@ -148,7 +172,6 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
           )
           .toList();
 
-      // 🔥 ordenar por más noticias
       filtered.sort((a, b) => b['count'].compareTo(a['count']));
 
       emit(CategoriesLoaded(filtered));
@@ -157,7 +180,9 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     }
   }
 
-  // ================= POSTS BY CATEGORY =================
+  // ─────────────────────────────
+  // 🏷 POSTS BY CATEGORY
+  // ─────────────────────────────
 
   Future<void> _fetchByCategory(
     FetchPostsByCategory event,
@@ -174,7 +199,13 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
         return;
       }
 
-      emit(NewsLoaded(posts: posts, bookmarks: bookmarks, hasMore: false));
+      emit(
+        NewsLoaded(
+          posts: posts,
+          bookmarks: bookmarks,
+          hasMore: false, // 🚫 sin infinite scroll
+        ),
+      );
     } catch (_) {
       emit(const NewsError('Error al cargar la categoría'));
     }

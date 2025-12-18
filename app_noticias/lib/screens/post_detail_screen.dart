@@ -19,30 +19,12 @@ class PostDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
 
-      // ─────────────────────────────
-      // 📰 APP BAR SUAVE
-      // ─────────────────────────────
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: Colors.black,
-        title: Text(
-          post.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
         actions: [
           BlocBuilder<NewsBloc, NewsState>(
-            buildWhen: (previous, current) {
-              if (previous is NewsLoaded && current is NewsLoaded) {
-                return previous.bookmarks != current.bookmarks;
-              }
-              if (previous is SearchLoaded && current is SearchLoaded) {
-                return previous.bookmarks != current.bookmarks;
-              }
-              return false;
-            },
             builder: (context, state) {
               final bookmarks = state is NewsLoaded
                   ? state.bookmarks
@@ -55,7 +37,7 @@ class PostDetailScreen extends StatelessWidget {
               return IconButton(
                 icon: Icon(
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: isBookmarked ? theme.primaryColor : Colors.black54,
+                  color: Colors.white,
                 ),
                 onPressed: () {
                   context.read<NewsBloc>().add(ToggleBookmark(post));
@@ -66,46 +48,68 @@ class PostDetailScreen extends StatelessWidget {
         ],
       ),
 
-      // ─────────────────────────────
-      // 📄 CONTENIDO
-      // ─────────────────────────────
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🖼 Imagen destacada
-            if (post.featuredImage != null)
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+      body: CustomScrollView(
+        slivers: [
+          // 🖼 HEADER CON IMAGEN
+          SliverToBoxAdapter(
+            child: Stack(
+              children: [
+                if (post.featuredImage != null)
+                  Image.network(
+                    post.featuredImage!,
+                    height: 260,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+
+                Container(
+                  height: 260,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.6),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.8),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(post.featuredImage!, fit: BoxFit.cover),
+
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 20,
+                  child: Text(
+                    post.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      height: 1.3,
+                    ),
+                  ),
                 ),
-              ),
+              ],
+            ),
+          ),
 
-            const SizedBox(height: 20),
-
-            // 📄 Contenido HTML
-            Container(
-              padding: const EdgeInsets.all(18),
+          // 📄 CONTENIDO
+          SliverToBoxAdapter(
+            child: Container(
+              transform: Matrix4.translationValues(0, -20, 0),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, -4),
                   ),
                 ],
               ),
@@ -115,10 +119,10 @@ class PostDetailScreen extends StatelessWidget {
                   "body": Style(
                     margin: Margins.zero,
                     fontSize: FontSize(16),
-                    lineHeight: LineHeight(1.6),
+                    lineHeight: LineHeight(1.7),
                     color: Colors.grey.shade800,
                   ),
-                  "p": Style(margin: Margins.only(bottom: 12)),
+                  "p": Style(margin: Margins.only(bottom: 14)),
                   "h1": Style(fontSize: FontSize(22)),
                   "h2": Style(fontSize: FontSize(20)),
                   "h3": Style(fontSize: FontSize(18)),
@@ -129,8 +133,8 @@ class PostDetailScreen extends StatelessWidget {
                 },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

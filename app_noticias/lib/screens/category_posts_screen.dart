@@ -73,15 +73,16 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
           // ✅ Posts cargados
           if (state is NewsLoaded) {
             return ListView.separated(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
               itemCount: state.posts.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) {
-                final post = state.posts[i];
-                final bookmarked = state.bookmarks.contains(post.id);
+              itemBuilder: (context, index) {
+                final post = state.posts[index];
+                final isBookmarked = state.bookmarks.contains(post.id);
 
                 return PostCard(
                   post: post,
+                  isBookmarked: isBookmarked,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -90,15 +91,9 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
                       ),
                     );
                   },
-                  trailing: IconButton(
-                    icon: Icon(
-                      bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                      color: bookmarked ? theme.primaryColor : Colors.grey,
-                    ),
-                    onPressed: () {
-                      context.read<NewsBloc>().add(ToggleBookmark(post));
-                    },
-                  ),
+                  onBookmark: () {
+                    context.read<NewsBloc>().add(ToggleBookmark(post));
+                  },
                 );
               },
             );
