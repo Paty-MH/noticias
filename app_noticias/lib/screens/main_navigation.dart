@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../bloc/news_bloc.dart';
-import '../bloc/news_event.dart';
 
 import 'home_screen.dart';
 import 'search_screen.dart';
@@ -27,25 +23,15 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   void _onTabChanged(int i) {
+    if (i == _index) return; // 🔥 evita rebuild innecesario
     setState(() => _index = i);
-
-    final bloc = context.read<NewsBloc>();
-
-    // 🔥 Al salir de BUSCAR o CUALQUIER TAB → volver a noticias
-    if (i != 1) {
-      bloc.add(FetchInitialPosts());
-    }
-
-    // 🔥 Al entrar a CATEGORÍAS
-    if (i == 2) {
-      bloc.add(FetchCategories());
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
         onTap: _onTabChanged,

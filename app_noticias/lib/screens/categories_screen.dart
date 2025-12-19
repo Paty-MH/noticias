@@ -18,7 +18,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   void initState() {
     super.initState();
 
-    // 🔥 Pedir categorías SOLO si aún no están cargadas
+    // ✅ Cargar categorías solo una vez
     final bloc = context.read<NewsBloc>();
     if (bloc.state is! CategoriesLoaded) {
       bloc.add(const FetchCategories());
@@ -31,29 +31,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
-
-      // ─────────────────────────────
-      // 📚 APP BAR
-      // ─────────────────────────────
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: Colors.black,
+        foregroundColor: const Color.fromARGB(255, 73, 72, 72),
         centerTitle: true,
         title: const Text(
           'Categorías',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-
-      // ─────────────────────────────
-      // 📦 BODY
-      // ─────────────────────────────
       body: BlocBuilder<NewsBloc, NewsState>(
-        // ✅ SOLO escuchar estados de categorías
         buildWhen: (_, state) =>
             state is CategoriesLoaded || state is NewsError,
-
         builder: (context, state) {
           // ❌ Error
           if (state is NewsError) {
@@ -84,18 +74,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
               itemCount: state.categories.length,
               itemBuilder: (context, index) {
-                final cat = state.categories[index];
+                final category = state.categories[index];
 
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    // 🚀 SOLO navegar (no dispares evento aquí)
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => CategoryPostsScreen(
-                          categoryId: cat['id'],
-                          categoryName: cat['name'],
+                          categoryId: category['id'],
+                          categoryName: category['name'],
                         ),
                       ),
                     );
@@ -115,7 +104,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       ],
                     ),
                     child: Text(
-                      cat['name'].toString().toUpperCase(),
+                      category['name'].toString().toUpperCase(),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -130,7 +119,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             );
           }
 
-          // 🧼 Estado inicial / fallback
+          // ⏳ Loader por defecto
           return const Center(child: CircularProgressIndicator(strokeWidth: 3));
         },
       ),
@@ -139,7 +128,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 }
 
 // ─────────────────────────────
-// 📭 ESTADO VACÍO / ERROR
+// 📭 EMPTY STATE
 // ─────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;

@@ -21,8 +21,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // 🔥 Cargar noticias iniciales
-    context.read<NewsBloc>().add(const FetchInitialPosts());
+    final bloc = context.read<NewsBloc>();
+
+    if (bloc.state is! NewsLoaded) {
+      bloc.add(const FetchInitialPosts());
+    }
 
     _scrollController.addListener(_onScroll);
   }
@@ -30,17 +33,14 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onScroll() {
     if (!_scrollController.hasClients) return;
 
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.position.pixels;
+    final position = _scrollController.position;
+    final state = context.read<NewsBloc>().state;
 
-    // ⬇️ cuando llega al 80% del scroll
-    if (currentScroll >= maxScroll * 0.8) {
-      final bloc = context.read<NewsBloc>();
-      final state = bloc.state;
-
-      if (state is NewsLoaded && state.hasMore) {
-        bloc.add(const FetchMorePosts());
-      }
+    if (state is NewsLoaded &&
+        state.hasMore &&
+        !state.isFetchingMore &&
+        position.pixels >= position.maxScrollExtent - 200) {
+      context.read<NewsBloc>().add(const FetchMorePosts());
     }
   }
 
@@ -59,13 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-
       body: BlocBuilder<NewsBloc, NewsState>(
-        buildWhen: (_, state) =>
-            state is NewsLoading ||
-            state is NewsLoaded ||
-            state is NewsEmpty ||
-            state is NewsError,
         builder: (context, state) {
           // ⏳ Loading inicial
           if (state is NewsLoading) {
@@ -94,63 +88,62 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // ✅ Noticias cargadas
           if (state is NewsLoaded) {
-            return Column(
-              children: [
-                // ───────── LISTA ─────────
-                Expanded(
-                  child: ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<NewsBloc>().add(const FetchInitialPosts());
+              },
+              child: ListView.separated(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                itemCount:
+                    state.posts.length +
+                    (state.hasMore || state.isFetchingMore ? 1 : 0),
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  // 📰 POST
+                  if (index < state.posts.length) {
+                    final post = state.posts[index];
+                    final isBookmarked = state.bookmarks.contains(post.id);
 
-                    // 🔥 FIX CLAVE
-                    itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-
-                    itemBuilder: (context, index) {
-                      // ───────── POSTS ─────────
-                      if (index < state.posts.length) {
-                        final post = state.posts[index];
-                        final isBookmarked = state.bookmarks.contains(post.id);
-
-                        return PostCard(
-                          post: post,
-                          isBookmarked: isBookmarked,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PostDetailScreen(post: post),
-                              ),
-                            );
-                          },
-                          onBookmark: () {
-                            context.read<NewsBloc>().add(ToggleBookmark(post));
-                          },
+                    return PostCard(
+                      post: post,
+                      isBookmarked: isBookmarked,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PostDetailScreen(post: post),
+                          ),
                         );
-                      }
+                      },
+                      onBookmark: () {
+                        context.read<NewsBloc>().add(ToggleBookmark(post));
+                      },
+                    );
+                  }
 
-                      // ───────── LOADER (solo si hasMore) ─────────
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                  // ⏳ LOADING MÁS
+                  if (state.isFetchingMore) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
 
-                // ───────── FOOTER FINAL ─────────
-                if (!state.hasMore)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      '📰 Ya no hay más noticias',
-                      style: TextStyle(color: Colors.grey),
+                  // 🚫 NO MÁS NOTICIAS
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(
+                      child: Text(
+                        'Ya no hay más noticias',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
-                  ),
-              ],
+                  );
+                },
+              ),
             );
           }
 

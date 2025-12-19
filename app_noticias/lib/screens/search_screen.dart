@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -14,32 +15,38 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen>
-    with SingleTickerProviderStateMixin {
+class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
+  Timer? _debounce;
   bool _hasSearched = false;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   void _search(String value) {
-    final query = value.trim();
+    _debounce?.cancel();
 
-    if (query.length < 2) {
-      setState(() => _hasSearched = false);
-      return;
-    }
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      final query = value.trim();
 
-    setState(() => _hasSearched = true);
-    context.read<NewsBloc>().add(SearchPosts(query));
+      if (query.length < 2) {
+        setState(() => _hasSearched = false);
+        return;
+      }
+
+      setState(() => _hasSearched = true);
+      context.read<NewsBloc>().add(SearchPosts(query));
+    });
   }
 
   void _clear() {
     _controller.clear();
     setState(() => _hasSearched = false);
+    context.read<NewsBloc>().add(const FetchInitialPosts());
   }
 
   @override
@@ -47,20 +54,16 @@ class _SearchScreenState extends State<SearchScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // 🖼 FONDO
           Positioned.fill(
             child: Image.asset('assets/images/news_bg.png', fit: BoxFit.cover),
           ),
-
-          // OSCURECER FONDO
           Positioned.fill(
             child: Container(color: Colors.black.withOpacity(0.45)),
           ),
-
           SafeArea(
             child: Column(
               children: [
-                // 🔍 BUSCADOR
+                // 🔍 SEARCH BAR
                 AnimatedPadding(
                   duration: const Duration(milliseconds: 350),
                   curve: Curves.easeOut,
@@ -78,7 +81,7 @@ class _SearchScreenState extends State<SearchScreen>
                   ),
                 ),
 
-                // 📰 RESULTADOS
+                // 📰 RESULTS
                 if (_hasSearched)
                   Expanded(
                     child: Container(
@@ -90,20 +93,13 @@ class _SearchScreenState extends State<SearchScreen>
                         ),
                       ),
                       child: BlocBuilder<NewsBloc, NewsState>(
-                        buildWhen: (_, state) =>
-                            state is SearchLoading ||
-                            state is SearchLoaded ||
-                            state is SearchEmpty ||
-                            state is NewsError,
                         builder: (context, state) {
-                          // ⏳ Cargando
                           if (state is SearchLoading) {
                             return const Center(
                               child: CircularProgressIndicator(),
                             );
                           }
 
-                          // ❌ Error
                           if (state is NewsError) {
                             return _SearchEmpty(
                               icon: Icons.error_outline,
@@ -112,32 +108,29 @@ class _SearchScreenState extends State<SearchScreen>
                             );
                           }
 
-                          // 🔍 NO ENCONTRADO
                           if (state is SearchEmpty) {
                             return const _SearchEmpty(
                               icon: Icons.search_off,
-                              title: 'Noticia no encontrada',
-                              subtitle:
-                                  'Intenta con otras palabras o revisa la ortografía',
+                              title: 'No encontrado',
+                              subtitle: 'Intenta con otras palabras',
                             );
                           }
 
-                          // ✅ RESULTADOS
                           if (state is SearchLoaded) {
                             return ListView.separated(
                               padding: const EdgeInsets.all(12),
                               itemCount: state.results.length,
                               separatorBuilder: (_, __) =>
                                   const SizedBox(height: 8),
-                              itemBuilder: (context, i) {
-                                final post = state.results[i];
-                                final bookmarked = state.bookmarks.contains(
+                              itemBuilder: (context, index) {
+                                final post = state.results[index];
+                                final isBookmarked = state.bookmarks.contains(
                                   post.id,
                                 );
 
                                 return PostCard(
                                   post: post,
-                                  isBookmarked: bookmarked,
+                                  isBookmarked: isBookmarked,
                                   onTap: () {
                                     Navigator.push(
                                       context,
@@ -171,7 +164,9 @@ class _SearchScreenState extends State<SearchScreen>
   }
 }
 
-// ───────── SEARCH BAR ─────────
+// ─────────────────────────────
+// 🔍 SEARCH BAR
+// ─────────────────────────────
 class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -208,7 +203,9 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ───────── EMPTY SEARCH ─────────
+// ─────────────────────────────
+// 📭 EMPTY SEARCH
+// ─────────────────────────────
 class _SearchEmpty extends StatelessWidget {
   final IconData icon;
   final String title;

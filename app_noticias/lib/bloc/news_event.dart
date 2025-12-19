@@ -28,14 +28,18 @@ class FetchMorePosts extends NewsEvent {
 /// ─────────────────────────────
 /// 🔖 BOOKMARKS
 /// ─────────────────────────────
+///
+/// 👉 Se envía el Post COMPLETO
+/// 👉 El BLoC decide cómo guardarlo
 
 class ToggleBookmark extends NewsEvent {
   final Post post;
 
   const ToggleBookmark(this.post);
 
+  /// 🔥 Equatable solo con ID (rendimiento + estabilidad)
   @override
-  List<Object?> get props => [post];
+  List<Object?> get props => [post.id];
 }
 
 /// ─────────────────────────────

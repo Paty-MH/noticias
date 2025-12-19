@@ -23,16 +23,16 @@ class PostDetailScreen extends StatelessWidget {
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+
         actions: [
           BlocBuilder<NewsBloc, NewsState>(
+            buildWhen: (_, state) => state is NewsLoaded,
             builder: (context, state) {
-              final bookmarks = state is NewsLoaded
-                  ? state.bookmarks
-                  : state is SearchLoaded
-                  ? state.bookmarks
-                  : const <int>[];
+              if (state is! NewsLoaded) {
+                return const SizedBox();
+              }
 
-              final isBookmarked = bookmarks.contains(post.id);
+              final isBookmarked = state.bookmarks.contains(post.id);
 
               return IconButton(
                 icon: Icon(
@@ -50,7 +50,9 @@ class PostDetailScreen extends StatelessWidget {
 
       body: CustomScrollView(
         slivers: [
-          // 🖼 HEADER CON IMAGEN
+          // ─────────────────────────────
+          // 🖼 HEADER
+          // ─────────────────────────────
           SliverToBoxAdapter(
             child: Stack(
               children: [
@@ -95,7 +97,9 @@ class PostDetailScreen extends StatelessWidget {
             ),
           ),
 
+          // ─────────────────────────────
           // 📄 CONTENIDO
+          // ─────────────────────────────
           SliverToBoxAdapter(
             child: Container(
               transform: Matrix4.translationValues(0, -20, 0),

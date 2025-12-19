@@ -29,54 +29,97 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Dismissible(
+      key: ValueKey(post.id),
 
-      // 🖼 IMAGEN
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: post.featuredImage != null
-            ? CachedNetworkImage(
-                imageUrl: post.featuredImage!,
-                width: 100,
-                height: 70,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  width: 100,
-                  height: 70,
-                  color: Colors.grey.shade200,
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  width: 100,
-                  height: 70,
-                  color: Colors.grey.shade200,
-                ),
-              )
-            : Container(width: 100, height: 70, color: Colors.grey.shade200),
-      ),
+      // 👉 Swipe de derecha a izquierda
+      direction: DismissDirection.endToStart,
 
-      // 📰 TÍTULO
-      title: Text(
-        post.title,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
+      confirmDismiss: (_) async {
+        onBookmark();
+        return false; // ❌ NO eliminar de la lista
+      },
 
-      // 📅 FECHA
-      subtitle: Text(
-        formatDate(post.date),
-        style: const TextStyle(fontSize: 12),
-      ),
-
-      // 🔖 BOOKMARK
-      trailing: IconButton(
-        icon: Icon(
-          isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-          color: isBookmarked ? Colors.deepPurple : Colors.grey,
+      background: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.centerRight,
+        decoration: BoxDecoration(
+          color: isBookmarked ? Colors.grey : Colors.deepPurple,
+          borderRadius: BorderRadius.circular(12),
         ),
-        onPressed: onBookmark,
+        child: Icon(
+          isBookmarked ? Icons.bookmark_remove : Icons.bookmark,
+          color: Colors.white,
+          size: 28,
+        ),
+      ),
+
+      child: Card(
+        elevation: 1,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          onTap: onTap,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+
+          // 🖼 IMAGEN
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: post.featuredImage != null
+                ? CachedNetworkImage(
+                    imageUrl: post.featuredImage!,
+                    width: 100,
+                    height: 70,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Container(
+                      width: 100,
+                      height: 70,
+                      color: Colors.grey.shade300,
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      width: 100,
+                      height: 70,
+                      color: Colors.grey.shade300,
+                    ),
+                  )
+                : Container(
+                    width: 100,
+                    height: 70,
+                    color: Colors.grey.shade300,
+                  ),
+          ),
+
+          // 📰 TÍTULO
+          title: Text(
+            post.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+
+          // 📅 FECHA
+          subtitle: Text(
+            formatDate(post.date),
+            style: const TextStyle(fontSize: 12),
+          ),
+
+          // 🔖 BOTÓN BOOKMARK
+          trailing: IconButton(
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: Icon(
+                isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                key: ValueKey(isBookmarked),
+                color: isBookmarked ? Colors.deepPurple : Colors.grey,
+              ),
+            ),
+            onPressed: onBookmark,
+          ),
+        ),
       ),
     );
   }
