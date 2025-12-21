@@ -22,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
 
     final bloc = context.read<NewsBloc>();
-
     if (bloc.state is! NewsLoaded) {
       bloc.add(const FetchInitialPosts());
     }
@@ -38,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (state is NewsLoaded &&
         state.hasMore &&
-        !state.isFetchingMore &&
         position.pixels >= position.maxScrollExtent - 200) {
       context.read<NewsBloc>().add(const FetchMorePosts());
     }
@@ -53,109 +51,167 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
+
+      // ─────────────────────────────
+      // 📰 APPBAR – NEWSNAP
+      // ─────────────────────────────
       appBar: AppBar(
-        title: const Text(
-          'Noticias',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        backgroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.flash_on_rounded, color: Colors.purpleAccent, size: 22),
+            SizedBox(width: 6),
+            Text(
+              'Newsnap',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                letterSpacing: 0.6,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
       ),
+
+      // ─────────────────────────────
+      // 📦 BODY
+      // ─────────────────────────────
       body: BlocBuilder<NewsBloc, NewsState>(
         builder: (context, state) {
-          // ⏳ Loading inicial
-          if (state is NewsLoading) {
-            return const Center(
-              child: CircularProgressIndicator(strokeWidth: 3),
-            );
-          }
-
-          // ❌ Error
-          if (state is NewsError) {
-            return _EmptyState(
-              icon: Icons.error_outline,
-              title: 'Error',
-              subtitle: state.message,
-            );
-          }
-
-          // 📭 Sin noticias
-          if (state is NewsEmpty) {
-            return const _EmptyState(
-              icon: Icons.newspaper_outlined,
-              title: 'Sin noticias',
-              subtitle: 'No hay noticias disponibles',
-            );
-          }
-
-          // ✅ Noticias cargadas
-          if (state is NewsLoaded) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<NewsBloc>().add(const FetchInitialPosts());
-              },
-              child: ListView.separated(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                itemCount:
-                    state.posts.length +
-                    (state.hasMore || state.isFetchingMore ? 1 : 0),
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  // 📰 POST
-                  if (index < state.posts.length) {
-                    final post = state.posts[index];
-                    final isBookmarked = state.bookmarks.contains(post.id);
-
-                    return PostCard(
-                      post: post,
-                      isBookmarked: isBookmarked,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PostDetailScreen(post: post),
-                          ),
-                        );
-                      },
-                      onBookmark: () {
-                        context.read<NewsBloc>().add(ToggleBookmark(post));
-                      },
-                    );
-                  }
-
-                  // ⏳ LOADING MÁS
-                  if (state.isFetchingMore) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    );
-                  }
-
-                  // 🚫 NO MÁS NOTICIAS
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Text(
-                        'Ya no hay más noticias',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          }
-
-          return const SizedBox();
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _buildState(context, state),
+          );
         },
       ),
+    );
+  }
+
+  Widget _buildState(BuildContext context, NewsState state) {
+    // ⏳ LOADING
+    if (state is NewsLoading) {
+      return const Center(
+        key: ValueKey('loading'),
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          color: Colors.purpleAccent,
+        ),
+      );
+    }
+
+    // ❌ ERROR
+    if (state is NewsError) {
+      return _EmptyState(
+        key: const ValueKey('error'),
+        icon: Icons.error_outline,
+        title: 'Ocurrió un error',
+        subtitle: state.message,
+      );
+    }
+
+    // 📭 VACÍO
+    if (state is NewsEmpty) {
+      return const _EmptyState(
+        key: ValueKey('empty'),
+        icon: Icons.newspaper_outlined,
+        title: 'Sin noticias',
+        subtitle: 'No hay noticias disponibles por ahora',
+      );
+    }
+
+    // ✅ CARGADO
+    if (state is NewsLoaded) {
+      return RefreshIndicator(
+        color: Colors.purpleAccent,
+        backgroundColor: Colors.black,
+        onRefresh: () async {
+          context.read<NewsBloc>().add(const FetchInitialPosts());
+        },
+        child: ListView.separated(
+          key: const ValueKey('list'),
+          controller: _scrollController,
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+          itemCount: state.posts.length + (state.hasMore ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            if (index < state.posts.length) {
+              final post = state.posts[index];
+              final isBookmarked = state.bookmarks.contains(post.id);
+
+              return _AnimatedPostItem(
+                index: index,
+                child: PostCard(
+                  post: post,
+                  isBookmarked: isBookmarked,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PostDetailScreen(post: post),
+                      ),
+                    );
+                  },
+                  onBookmark: () {
+                    context.read<NewsBloc>().add(ToggleBookmark(post));
+                  },
+                ),
+              );
+            }
+
+            // ⏳ CARGANDO MÁS
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.purpleAccent,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return const SizedBox();
+  }
+}
+
+// ─────────────────────────────
+// 🎞 ANIMACIÓN POR ITEM
+// ─────────────────────────────
+class _AnimatedPostItem extends StatelessWidget {
+  final Widget child;
+  final int index;
+
+  const _AnimatedPostItem({required this.child, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 300 + (index * 40)),
+      curve: Curves.easeOut,
+      builder: (context, value, _) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
 
 // ─────────────────────────────
-// 📭 EMPTY STATE
+// 📭 EMPTY / ERROR STATE
 // ─────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;
@@ -163,6 +219,7 @@ class _EmptyState extends StatelessWidget {
   final String subtitle;
 
   const _EmptyState({
+    super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -176,17 +233,21 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade400),
+            Icon(icon, size: 64, color: Colors.grey.shade600),
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: Colors.grey.shade400),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -17,8 +18,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
   void initState() {
     super.initState();
-
-    // ✅ Cargar categorías solo una vez
     final bloc = context.read<NewsBloc>();
     if (bloc.state is! CategoriesLoaded) {
       bloc.add(const FetchCategories());
@@ -28,14 +27,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: const Color.fromARGB(255, 73, 72, 72),
         centerTitle: true,
+        elevation: 0,
         title: const Text(
           'Categorías',
           style: TextStyle(fontWeight: FontWeight.w600),
@@ -45,7 +42,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         buildWhen: (_, state) =>
             state is CategoriesLoaded || state is NewsError,
         builder: (context, state) {
-          // ❌ Error
           if (state is NewsError) {
             return _EmptyState(
               icon: Icons.error_outline,
@@ -54,7 +50,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             );
           }
 
-          // ✅ Categorías cargadas
           if (state is CategoriesLoaded) {
             if (state.categories.isEmpty) {
               return const _EmptyState(
@@ -68,16 +63,17 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.4,
+                mainAxisSpacing: 18,
+                crossAxisSpacing: 18,
+                childAspectRatio: 1.15,
               ),
               itemCount: state.categories.length,
               itemBuilder: (context, index) {
                 final category = state.categories[index];
 
-                return InkWell(
-                  borderRadius: BorderRadius.circular(16),
+                return _CategoryCard(
+                  title: category['name'],
+                  isDark: isDark,
                   onTap: () {
                     Navigator.push(
                       context,
@@ -89,39 +85,75 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       ),
                     );
                   },
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 10,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      category['name'].toString().toUpperCase(),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.8,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                  ),
                 );
               },
             );
           }
 
-          // ⏳ Loader por defecto
           return const Center(child: CircularProgressIndicator(strokeWidth: 3));
         },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────
+// 🎨 CATEGORY CARD
+// ─────────────────────────────
+class _CategoryCard extends StatelessWidget {
+  final String title;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _CategoryCard({
+    required this.title,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF2C2C2C), const Color(0xFF3A3A3A)]
+                    : [const Color(0xFFEDE7F6), const Color(0xFFD1C4E9)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.4 : 0.15),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: Text(
+                title.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: isDark ? Colors.white : Colors.deepPurple.shade700,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -143,23 +175,29 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade400),
+            Icon(icon, size: 64, color: theme.hintColor),
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.hintColor,
+              ),
             ),
           ],
         ),

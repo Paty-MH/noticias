@@ -14,16 +14,18 @@ class BookmarksScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: theme.scaffoldBackgroundColor,
-        foregroundColor: Colors.white,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
+        centerTitle: true,
         title: const Text(
           'Guardados',
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       body: BlocBuilder<NewsBloc, NewsState>(
@@ -44,7 +46,7 @@ class BookmarksScreen extends StatelessWidget {
           if (state is NewsError) {
             return _EmptyState(
               icon: Icons.error_outline,
-              title: 'Error',
+              title: 'Algo salió mal',
               subtitle: state.message,
             );
           }
@@ -55,33 +57,39 @@ class BookmarksScreen extends StatelessWidget {
 
             if (bookmarkedPosts.isEmpty) {
               return const _EmptyState(
-                icon: Icons.bookmark_border,
+                icon: Icons.bookmark_outline,
                 title: 'Sin guardados',
-                subtitle: 'Aún no has guardado ninguna noticia',
+                subtitle:
+                    'Guarda noticias para leerlas después, incluso sin conexión.',
               );
             }
 
             return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 32),
+              physics: const BouncingScrollPhysics(),
               itemCount: bookmarkedPosts.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final post = bookmarkedPosts[index];
 
-                return PostCard(
-                  post: post,
-                  isBookmarked: true,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PostDetailScreen(post: post),
-                      ),
-                    );
-                  },
-                  onBookmark: () {
-                    context.read<NewsBloc>().add(ToggleBookmark(post));
-                  },
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  child: PostCard(
+                    post: post,
+                    isBookmarked: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PostDetailScreen(post: post),
+                        ),
+                      );
+                    },
+                    onBookmark: () {
+                      context.read<NewsBloc>().add(ToggleBookmark(post));
+                    },
+                  ),
                 );
               },
             );
@@ -95,7 +103,7 @@ class BookmarksScreen extends StatelessWidget {
 }
 
 // ─────────────────────────────
-// 📭 EMPTY STATE
+// 📭 EMPTY STATE (MEJORADO)
 // ─────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;
@@ -110,23 +118,38 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
+            Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.primary.withOpacity(0.12),
+              ),
+              child: Icon(icon, size: 42, color: colors.primary),
+            ),
+            const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurface.withOpacity(0.7),
+              ),
             ),
           ],
         ),
