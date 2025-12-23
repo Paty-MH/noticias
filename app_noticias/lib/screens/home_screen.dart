@@ -7,6 +7,10 @@ import '../bloc/news_state.dart';
 import '../components/post_card.dart';
 import 'post_detail_screen.dart';
 
+// 🔽 COMMENTS
+import '../comments/bloc/comments_bloc.dart';
+import '../comments/bloc/comments_event.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,18 +19,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ScrollController _scrollController = ScrollController();
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
 
+    _scrollController = ScrollController()..addListener(_onScroll);
+
     final bloc = context.read<NewsBloc>();
     if (bloc.state is! NewsLoaded) {
       bloc.add(const FetchInitialPosts());
     }
-
-    _scrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
@@ -44,7 +48,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
   }
 
@@ -53,9 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
 
-      // ─────────────────────────────
-      // 📰 APPBAR – NEWSNAP
-      // ─────────────────────────────
+      // 📰 APPBAR
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -78,9 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // ─────────────────────────────
       // 📦 BODY
-      // ─────────────────────────────
       body: BlocBuilder<NewsBloc, NewsState>(
         builder: (context, state) {
           return AnimatedSwitcher(
@@ -148,14 +150,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: PostCard(
                   post: post,
                   isBookmarked: isBookmarked,
+
+                  // ✅ NAVEGACIÓN CORRECTA CON COMMENTS BLOC
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => PostDetailScreen(post: post),
+                        builder: (_) => BlocProvider(
+                          create: (_) =>
+                              CommentsBloc()
+                                ..add(LoadComments(post.id.toString())),
+                          child: PostDetailScreen(post: post),
+                        ),
                       ),
                     );
                   },
+
                   onBookmark: () {
                     context.read<NewsBloc>().add(ToggleBookmark(post));
                   },
@@ -183,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ─────────────────────────────
-// 🎞 ANIMACIÓN POR ITEM
+// 🎞 ANIMACIÓN DE ITEM
 // ─────────────────────────────
 class _AnimatedPostItem extends StatelessWidget {
   final Widget child;
@@ -195,7 +205,7 @@ class _AnimatedPostItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 300 + (index * 40)),
+      duration: Duration(milliseconds: 300 + index * 40),
       curve: Curves.easeOut,
       builder: (context, value, _) {
         return Opacity(

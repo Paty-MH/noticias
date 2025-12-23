@@ -18,10 +18,11 @@ class PostCard extends StatelessWidget {
     required this.onBookmark,
   });
 
+  // 📅 Formatear fecha segura
   String formatDate(String dateStr) {
     try {
-      final d = DateTime.parse(dateStr);
-      return DateFormat.yMMMd().format(d);
+      final date = DateTime.parse(dateStr);
+      return DateFormat.yMMMd().format(date);
     } catch (_) {
       return dateStr;
     }
@@ -32,12 +33,13 @@ class PostCard extends StatelessWidget {
     return Dismissible(
       key: ValueKey(post.id),
 
-      // 👉 Swipe de derecha a izquierda
+      // 👉 Swipe derecha → izquierda
       direction: DismissDirection.endToStart,
 
+      // 🔖 Toggle bookmark sin eliminar
       confirmDismiss: (_) async {
         onBookmark();
-        return false; // ❌ NO eliminar de la lista
+        return false;
       },
 
       background: Container(
@@ -84,12 +86,14 @@ class PostCard extends StatelessWidget {
                       width: 100,
                       height: 70,
                       color: Colors.grey.shade300,
+                      child: const Icon(Icons.broken_image),
                     ),
                   )
                 : Container(
                     width: 100,
                     height: 70,
                     color: Colors.grey.shade300,
+                    child: const Icon(Icons.image_not_supported),
                   ),
           ),
 
@@ -109,15 +113,17 @@ class PostCard extends StatelessWidget {
 
           // 🔖 BOTÓN BOOKMARK
           trailing: IconButton(
+            onPressed: onBookmark,
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, animation) =>
+                  ScaleTransition(scale: animation, child: child),
               child: Icon(
                 isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                 key: ValueKey(isBookmarked),
                 color: isBookmarked ? Colors.deepPurple : Colors.grey,
               ),
             ),
-            onPressed: onBookmark,
           ),
         ),
       ),
