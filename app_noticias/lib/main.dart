@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_core/firebase_core.dart';
+
+import 'firebase_options.dart';
 
 import 'bloc/news_bloc.dart';
 import 'bloc/news_event.dart';
@@ -14,7 +17,12 @@ import 'screens/main_navigation.dart';
 import 'auth/screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  /// 🔥 INICIALIZAR FIREBASE (OBLIGATORIO)
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const NewsApp());
 }
 
@@ -28,7 +36,7 @@ class NewsApp extends StatelessWidget {
         /// 🔐 AUTH
         BlocProvider(create: (_) => AuthBloc(AuthService())..add(AppStarted())),
 
-        /// 📰 NEWS (EL QUE YA TENÍAS)
+        /// 📰 NEWS
         BlocProvider(
           create: (_) => NewsBloc(ApiService())..add(const FetchInitialPosts()),
         ),
@@ -37,7 +45,6 @@ class NewsApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'NewsApp',
 
-        // 🌙 DARK MODE
         themeMode: ThemeMode.system,
 
         theme: ThemeData(
@@ -54,7 +61,6 @@ class NewsApp extends StatelessWidget {
           appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
         ),
 
-        /// 🔁 DECISIÓN DE FLUJO
         home: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is AuthAuthenticated) {

@@ -52,23 +52,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () {
               context.read<AuthBloc>().add(LogoutRequested());
-              Navigator.pop(context);
             },
           ),
         ],
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
+          // ❌ ERROR
           if (state is AuthError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
 
+          // ✅ PERFIL ACTUALIZADO
           if (state is AuthAuthenticated) {
-            ScaffoldMessenger.of(
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ Perfil actualizado correctamente'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+
+          // 🚪 LOGOUT → LOGIN
+          if (state is AuthUnauthenticated) {
+            Navigator.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('Perfil actualizado')));
+            ).pushNamedAndRemoveUntil('/login', (route) => false);
           }
         },
         builder: (context, state) {
@@ -84,58 +98,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
             padding: const EdgeInsets.all(24),
             child: ListView(
               children: [
-                CircleAvatar(
-                  radius: 70,
-                  backgroundImage: state.user.imageUrl.isNotEmpty
-                      ? NetworkImage(state.user.imageUrl)
-                      : null,
-                  child: state.user.imageUrl.isEmpty
-                      ? const Icon(Icons.person, size: 60)
-                      : null,
+                // 👤 FOTO PERFIL (RECORTE PERFECTO)
+                Center(
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.grey.shade200,
+                      image: state.user.imageUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(state.user.imageUrl),
+                              fit: BoxFit.cover, // 🔥 CLAVE
+                            )
+                          : null,
+                    ),
+                    child: state.user.imageUrl.isEmpty
+                        ? const Icon(Icons.person, size: 70, color: Colors.grey)
+                        : null,
+                  ),
                 ),
-                const SizedBox(height: 20),
 
+                const SizedBox(height: 24),
+
+                // 👤 NOMBRE
                 TextField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Nombre'),
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
+                // 📞 TELÉFONO
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Teléfono'),
+                  decoration: const InputDecoration(
+                    labelText: 'Teléfono',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
+                // 🖼 IMAGEN URL
                 TextField(
                   controller: imageCtrl,
                   decoration: const InputDecoration(
                     labelText: 'URL imagen de perfil',
+                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameCtrl.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('El nombre es obligatorio'),
+                // 💾 GUARDAR CAMBIOS
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.save),
+                    label: const Text('Guardar cambios'),
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('El nombre es obligatorio'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      context.read<AuthBloc>().add(
+                        UpdateProfileRequested(
+                          name: nameCtrl.text.trim(),
+                          phone: phoneCtrl.text.trim(),
+                          imageUrl: imageCtrl.text.trim(),
                         ),
                       );
-                      return;
-                    }
-
-                    context.read<AuthBloc>().add(
-                      UpdateProfileRequested(
-                        name: nameCtrl.text.trim(),
-                        phone: phoneCtrl.text.trim(),
-                        imageUrl: imageCtrl.text.trim(),
-                      ),
-                    );
-                  },
-                  child: const Text('Guardar cambios'),
+                    },
+                  ),
                 ),
               ],
             ),

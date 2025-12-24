@@ -1,111 +1,110 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../models/app_user.dart';
 
 class AuthService {
-  static const _userKey = 'logged_user';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // 🔁 Obtener sesión activa
+  /// 🔁 SESIÓN ACTIVA
   Future<AppUser?> getCurrentUser() async {
-    final sp = await SharedPreferences.getInstance();
-    final jsonStr = sp.getString(_userKey);
-    if (jsonStr == null) return null;
-    return AppUser.fromJson(jsonDecode(jsonStr));
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    final doc = await _db.collection('users').doc(user.uid).get();
+    if (!doc.exists) return null;
+
+    return AppUser.fromFirestore(user.uid, doc.data()!);
   }
 
-  // 📝 REGISTRO
-  Future<AppUser> register(String name, String email, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      throw Exception('Todos los campos son obligatorios');
-    }
-
-    final user = AppUser(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      email: email,
-      phone: '',
-      imageUrl: '',
-    );
-
-    final sp = await SharedPreferences.getInstance();
-    await sp.setString(_userKey, jsonEncode(user.toJson()));
-
-    return user;
-  }
-
-  // 🔐 LOGIN
+  /// 🔐 LOGIN
   Future<AppUser> login(String email, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    if (email.isEmpty || password.isEmpty) {
-      throw Exception('Campos obligatorios');
+      final user = cred.user!;
+      final doc = await _db.collection('users').doc(user.uid).get();
+
+      if (!doc.exists) {
+        throw Exception('Usuario no encontrado en la base de datos');
+      }
+
+      return AppUser.fromFirestore(user.uid, doc.data()!);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        throw Exception('No existe una cuenta con este correo');
+      } else if (e.code == 'wrong-password') {
+        throw Exception('Contraseña incorrecta');
+      } else if (e.code == 'invalid-email') {
+        throw Exception('Correo inválido');
+      } else {
+        throw Exception('Error al iniciar sesión');
+      }
     }
-
-    final sp = await SharedPreferences.getInstance();
-    final jsonStr = sp.getString(_userKey);
-
-    if (jsonStr == null) {
-      throw Exception('Usuario no registrado');
-    }
-
-    final user = AppUser.fromJson(jsonDecode(jsonStr));
-
-    if (user.email != email) {
-      throw Exception('Usuario o contraseña incorrectos');
-    }
-
-    return user;
   }
 
-  // 👤 PERFIL → obtener datos
-  Future<AppUser> getProfile() async {
-    final sp = await SharedPreferences.getInstance();
-    final jsonStr = sp.getString(_userKey);
+  /// 📝 REGISTER
+  Future<AppUser> register(String name, String email, String password) async {
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    if (jsonStr == null) {
-      throw Exception('No hay sesión activa');
+      final user = cred.user!;
+
+      final appUser = AppUser(
+        id: user.uid,
+        name: name,
+        email: email,
+        phone: '',
+        imageUrl: '',
+      );
+
+      await _db.collection('users').doc(user.uid).set(appUser.toMap());
+
+      return appUser;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw Exception('Este correo ya está registrado');
+      } else if (e.code == 'weak-password') {
+        throw Exception('La contraseña es muy débil');
+      } else if (e.code == 'invalid-email') {
+        throw Exception('El correo no es válido');
+      } else {
+        throw Exception('Error al registrar usuario');
+      }
     }
-
-    return AppUser.fromJson(jsonDecode(jsonStr));
   }
 
-  // ✏️ PERFIL → actualizar datos
+  /// ✏️ UPDATE PROFILE
   Future<AppUser> updateProfile({
     required String name,
     required String phone,
     required String imageUrl,
   }) async {
-    await Future.delayed(const Duration(seconds: 1));
-
-    if (name.isEmpty) {
-      throw Exception('El nombre es obligatorio');
-    }
-
-    final sp = await SharedPreferences.getInstance();
-    final jsonStr = sp.getString(_userKey);
-
-    if (jsonStr == null) {
+    final user = _auth.currentUser;
+    if (user == null) {
       throw Exception('No hay sesión activa');
     }
 
-    final currentUser = AppUser.fromJson(jsonDecode(jsonStr));
+    await _db.collection('users').doc(user.uid).update({
+      'name': name,
+      'phone': phone,
+      'imageUrl': imageUrl,
+    });
 
-    final updatedUser = currentUser.copyWith(
-      name: name,
-      phone: phone,
-      imageUrl: imageUrl,
-    );
+    final updatedDoc = await _db.collection('users').doc(user.uid).get();
 
-    await sp.setString(_userKey, jsonEncode(updatedUser.toJson()));
-
-    return updatedUser;
+    return AppUser.fromFirestore(user.uid, updatedDoc.data()!);
   }
 
-  // 🚪 LOGOUT
+  /// 🚪 LOGOUT
   Future<void> logout() async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.remove(_userKey);
+    await _auth.signOut();
   }
 }
