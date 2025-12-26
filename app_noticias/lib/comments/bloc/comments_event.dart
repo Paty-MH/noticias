@@ -1,16 +1,33 @@
-abstract class CommentsEvent {}
+import 'package:equatable/equatable.dart';
 
-// Cargar comentarios de una noticia
-class LoadComments extends CommentsEvent {
-  final String postId;
+abstract class CommentsEvent extends Equatable {
+  const CommentsEvent();
 
-  LoadComments(this.postId);
+  @override
+  List<Object?> get props => [];
 }
 
-// Agregar comentario
+class LoadComments extends CommentsEvent {
+  final String postId;
+  const LoadComments(this.postId);
+
+  @override
+  List<Object?> get props => [postId];
+}
+
 class AddComment extends CommentsEvent {
   final String postId;
   final String content;
+  final String userName;
+  final String userId;
 
-  AddComment({required this.postId, required this.content});
+  const AddComment({
+    required this.postId,
+    required this.content,
+    required this.userName,
+    required this.userId,
+  });
+
+  @override
+  List<Object?> get props => [postId, content, userName, userId];
 }

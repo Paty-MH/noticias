@@ -7,10 +7,6 @@ import '../bloc/news_state.dart';
 import '../components/post_card.dart';
 import 'post_detail_screen.dart';
 
-// 🔽 COMMENTS
-import '../comments/bloc/comments_bloc.dart';
-import '../comments/bloc/comments_event.dart';
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -151,17 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   post: post,
                   isBookmarked: isBookmarked,
 
-                  // ✅ NAVEGACIÓN CORRECTA CON COMMENTS BLOC
+                  // ✅ NAVEGACIÓN LIMPIA
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => BlocProvider(
-                          create: (_) =>
-                              CommentsBloc()
-                                ..add(LoadComments(post.id.toString())),
-                          child: PostDetailScreen(post: post),
-                        ),
+                        builder: (_) => PostDetailScreen(post: post),
                       ),
                     );
                   },

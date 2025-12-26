@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -13,11 +14,31 @@ import '../comments/bloc/comments_bloc.dart';
 import '../comments/bloc/comments_event.dart';
 import '../comments/bloc/comments_state.dart';
 import '../comments/models/comment_model.dart';
+import '../comments/services/comments_service.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_state.dart';
 
 class PostDetailScreen extends StatelessWidget {
   final Post post;
 
   const PostDetailScreen({super.key, required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      /// ✅ CommentsBloc SOLO vive aquí
+      create: (_) =>
+          CommentsBloc(CommentsService())
+            ..add(LoadComments(post.id.toString())),
+      child: _PostDetailView(post: post),
+    );
+  }
+}
+
+class _PostDetailView extends StatelessWidget {
+  final Post post;
+
+  const _PostDetailView({required this.post});
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +61,8 @@ class PostDetailScreen extends StatelessWidget {
                 icon: Icon(
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                 ),
-                onPressed: () {
-                  context.read<NewsBloc>().add(ToggleBookmark(post));
-                },
+                onPressed: () =>
+                    context.read<NewsBloc>().add(ToggleBookmark(post)),
               );
             },
           ),
@@ -51,9 +71,7 @@ class PostDetailScreen extends StatelessWidget {
 
       body: CustomScrollView(
         slivers: [
-          // ─────────────────────────────
-          // 🖼 HEADER
-          // ─────────────────────────────
+          // ───────── HEADER ─────────
           SliverToBoxAdapter(
             child: Stack(
               children: [
@@ -64,7 +82,6 @@ class PostDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
-
                 Container(
                   height: 260,
                   decoration: BoxDecoration(
@@ -72,14 +89,13 @@ class PostDetailScreen extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.6),
+                        Colors.black.withOpacity(0.6),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.8),
+                        Colors.black.withOpacity(0.8),
                       ],
                     ),
                   ),
                 ),
-
                 Positioned(
                   left: 16,
                   right: 16,
@@ -98,9 +114,7 @@ class PostDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // ─────────────────────────────
-          // 📄 CONTENIDO
-          // ─────────────────────────────
+          // ───────── CONTENIDO ─────────
           SliverToBoxAdapter(
             child: Container(
               transform: Matrix4.translationValues(0, -20, 0),
@@ -109,22 +123,11 @@ class PostDetailScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
-              child: Html(
-                data: post.content,
-                style: {
-                  "body": Style(
-                    margin: Margins.zero,
-                    fontSize: FontSize(16),
-                    lineHeight: LineHeight(1.7),
-                  ),
-                },
-              ),
+              child: Html(data: post.content),
             ),
           ),
 
-          // ─────────────────────────────
-          // 💬 COMENTARIOS
-          // ─────────────────────────────
+          // ───────── COMENTARIOS ─────────
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -149,17 +152,17 @@ class PostDetailScreen extends StatelessWidget {
                         }
 
                         return Column(
-                          children: state.comments.map((Comment comment) {
+                          children: state.comments.map((Comment c) {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
                                 leading: const Icon(Icons.person),
-                                title: Text(comment.userName),
-                                subtitle: Text(comment.content),
+                                title: Text(c.userName),
+                                subtitle: Text(c.content),
                                 trailing: Text(
                                   DateFormat(
                                     'dd/MM/yyyy HH:mm',
-                                  ).format(comment.createdAt),
+                                  ).format(c.createdAt),
                                   style: const TextStyle(fontSize: 11),
                                 ),
                               ),
@@ -188,12 +191,9 @@ class PostDetailScreen extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────
-// ✍️ INPUT COMENTARIO
-// ─────────────────────────────
+// ───────── INPUT COMENTARIO ─────────
 class _AddCommentInput extends StatefulWidget {
   final String postId;
-
   const _AddCommentInput({required this.postId});
 
   @override
@@ -216,14 +216,28 @@ class _AddCommentInputState extends State<_AddCommentInput> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.send),
           onPressed: () {
             if (ctrl.text.trim().isEmpty) return;
 
+            // Obtener info del usuario desde AuthBloc
+            final authState = context.read<AuthBloc>().state;
+            String userName = 'Usuario';
+            String userId = '1';
+
+            if (authState is AuthAuthenticated) {
+              userName = authState.user.name;
+              userId = authState.user.id;
+            }
+
             context.read<CommentsBloc>().add(
-              AddComment(postId: widget.postId, content: ctrl.text.trim()),
+              AddComment(
+                postId: widget.postId,
+                content: ctrl.text.trim(),
+                userName: userName,
+                userId: userId,
+              ),
             );
 
             ctrl.clear();

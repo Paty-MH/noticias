@@ -1,44 +1,48 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../services/comments_service.dart';
 import 'comments_event.dart';
 import 'comments_state.dart';
-import '../models/comment_model.dart';
 
 class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
-  final List<Comment> _comments = [];
+  final CommentsService service;
+  StreamSubscription? _sub;
 
-  CommentsBloc() : super(CommentsInitial()) {
-    on<LoadComments>(_onLoadComments);
-    on<AddComment>(_onAddComment);
+  CommentsBloc(this.service) : super(CommentsLoading()) {
+    on<LoadComments>(_onLoad);
+    on<AddComment>(_onAdd);
   }
 
-  void _onLoadComments(LoadComments event, Emitter<CommentsState> emit) async {
+  void _onLoad(LoadComments event, Emitter<CommentsState> emit) async {
     emit(CommentsLoading());
+    await _sub?.cancel();
 
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    final postComments = _comments
-        .where((c) => c.postId == event.postId)
-        .toList();
-
-    emit(CommentsLoaded(postComments));
+    _sub = service
+        .streamComments(event.postId)
+        .listen(
+          (comments) => emit(CommentsLoaded(comments)),
+          onError: (_) =>
+              emit(const CommentsError('Error al cargar comentarios')),
+        );
   }
 
-  void _onAddComment(AddComment event, Emitter<CommentsState> emit) async {
-    if (state is! CommentsLoaded) return;
+  Future<void> _onAdd(AddComment event, Emitter<CommentsState> emit) async {
+    try {
+      await service.addComment(
+        postId: event.postId,
+        content: event.content,
+        userName: event.userName,
+        userId: event.userId,
+      );
+      // El stream actualiza automáticamente los comentarios
+    } catch (_) {
+      emit(const CommentsError('No se pudo enviar el comentario'));
+    }
+  }
 
-    final newComment = Comment(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      postId: event.postId,
-      userId: '1',
-      userName: 'Usuario',
-      content: event.content,
-      createdAt: DateTime.now(),
-    );
-
-    _comments.add(newComment);
-
-    emit(
-      CommentsLoaded(_comments.where((c) => c.postId == event.postId).toList()),
-    );
+  @override
+  Future<void> close() {
+    _sub?.cancel();
+    return super.close();
   }
 }
