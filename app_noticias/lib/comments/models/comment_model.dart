@@ -19,7 +19,6 @@ class Comment {
 
   factory Comment.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-
     return Comment(
       id: doc.id,
       postId: data['postId'] ?? '',
@@ -28,15 +27,5 @@ class Comment {
       content: data['content'] ?? '',
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'postId': postId,
-      'userId': userId,
-      'userName': userName,
-      'content': content,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
   }
 }

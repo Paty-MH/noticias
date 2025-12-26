@@ -15,8 +15,7 @@ class CommentsLoaded extends CommentsState {
   const CommentsLoaded(this.comments);
 
   @override
-  List<Object?> get props =>
-      comments.map((c) => '${c.id}-${c.content}-${c.userId}').toList();
+  List<Object?> get props => comments;
 }
 
 class CommentsError extends CommentsState {

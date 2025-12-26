@@ -1,32 +1,42 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../models/comment_model.dart';
 import '../services/comments_service.dart';
 import 'comments_event.dart';
 import 'comments_state.dart';
 
 class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
   final CommentsService service;
-  StreamSubscription? _sub;
+  StreamSubscription<List<Comment>>? _commentsSub;
 
   CommentsBloc(this.service) : super(CommentsLoading()) {
-    on<LoadComments>(_onLoad);
-    on<AddComment>(_onAdd);
+    on<LoadComments>(_onLoadComments);
+    on<AddComment>(_onAddComment);
+    on<_CommentsUpdated>(_onCommentsUpdated);
   }
 
-  void _onLoad(LoadComments event, Emitter<CommentsState> emit) async {
+  // 🔹 Cargar comentarios en tiempo real
+  void _onLoadComments(LoadComments event, Emitter<CommentsState> emit) async {
     emit(CommentsLoading());
-    await _sub?.cancel();
 
-    _sub = service
+    await _commentsSub?.cancel();
+    _commentsSub = service
         .streamComments(event.postId)
         .listen(
-          (comments) => emit(CommentsLoaded(comments)),
-          onError: (_) =>
-              emit(const CommentsError('Error al cargar comentarios')),
+          (comments) {
+            add(_CommentsUpdated(comments));
+          },
+          onError: (error) {
+            emit(CommentsError('Error al cargar comentarios: $error'));
+          },
         );
   }
 
-  Future<void> _onAdd(AddComment event, Emitter<CommentsState> emit) async {
+  // 🔹 Agregar comentario
+  Future<void> _onAddComment(
+    AddComment event,
+    Emitter<CommentsState> emit,
+  ) async {
     try {
       await service.addComment(
         postId: event.postId,
@@ -34,15 +44,29 @@ class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
         userName: event.userName,
         userId: event.userId,
       );
-      // El stream actualiza automáticamente los comentarios
-    } catch (_) {
-      emit(const CommentsError('No se pudo enviar el comentario'));
+      // No necesitamos recargar; el stream actualizará automáticamente
+    } catch (e) {
+      emit(CommentsError('No se pudo enviar el comentario: $e'));
     }
+  }
+
+  // 🔹 Actualizar comentarios desde el stream
+  void _onCommentsUpdated(_CommentsUpdated event, Emitter<CommentsState> emit) {
+    emit(CommentsLoaded(event.comments));
   }
 
   @override
   Future<void> close() {
-    _sub?.cancel();
+    _commentsSub?.cancel();
     return super.close();
   }
+}
+
+/// Evento privado para actualizar comentarios desde el stream
+class _CommentsUpdated extends CommentsEvent {
+  final List<Comment> comments;
+  _CommentsUpdated(this.comments);
+
+  @override
+  List<Object?> get props => [comments];
 }

@@ -49,12 +49,14 @@ class _CommentsViewState extends State<_CommentsView> {
                 if (state is CommentsLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 if (state is CommentsLoaded) {
                   if (state.comments.isEmpty) {
                     return const Center(
                       child: Text('Sé el primero en comentar 😊'),
                     );
                   }
+
                   return ListView.builder(
                     reverse: true,
                     itemCount: state.comments.length,
@@ -72,13 +74,16 @@ class _CommentsViewState extends State<_CommentsView> {
                     },
                   );
                 }
+
                 if (state is CommentsError) {
                   return Center(child: Text(state.message));
                 }
+
                 return const SizedBox();
               },
             ),
           ),
+
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(12),
@@ -99,15 +104,16 @@ class _CommentsViewState extends State<_CommentsView> {
                     final text = _controller.text.trim();
                     if (text.isEmpty) return;
 
-                    final authState = context.read<AuthBloc>().state;
+                    // Obtener datos del usuario desde AuthBloc
                     String userName = 'Usuario';
                     String userId = '1';
-
+                    final authState = context.read<AuthBloc>().state;
                     if (authState is AuthAuthenticated) {
                       userName = authState.user.name;
                       userId = authState.user.id;
                     }
 
+                    // Agregar comentario con todos los campos necesarios
                     context.read<CommentsBloc>().add(
                       AddComment(
                         postId: widget.postId,

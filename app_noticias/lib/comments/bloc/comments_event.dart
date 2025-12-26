@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../models/comment_model.dart';
 
 abstract class CommentsEvent extends Equatable {
   const CommentsEvent();
@@ -30,4 +31,13 @@ class AddComment extends CommentsEvent {
 
   @override
   List<Object?> get props => [postId, content, userName, userId];
+}
+
+/// Evento privado para actualizar comentarios desde el stream
+class _CommentsUpdated extends CommentsEvent {
+  final List<Comment> comments;
+  const _CommentsUpdated(this.comments);
+
+  @override
+  List<Object?> get props => [comments];
 }
