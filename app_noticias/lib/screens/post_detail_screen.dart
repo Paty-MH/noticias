@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -26,7 +25,6 @@ class PostDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      /// ✅ CommentsBloc SOLO vive aquí
       create: (_) =>
           CommentsBloc(CommentsService())
             ..add(LoadComments(post.id.toString())),
@@ -43,12 +41,12 @@ class _PostDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.black,
 
       appBar: AppBar(
+        backgroundColor: Colors.black.withOpacity(0.7),
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        title: const Text('Newsnap'),
         actions: [
           BlocBuilder<NewsBloc, NewsState>(
             buildWhen: (_, state) => state is NewsLoaded,
@@ -60,6 +58,7 @@ class _PostDetailView extends StatelessWidget {
               return IconButton(
                 icon: Icon(
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: Colors.purpleAccent,
                 ),
                 onPressed: () =>
                     context.read<NewsBloc>().add(ToggleBookmark(post)),
@@ -71,27 +70,26 @@ class _PostDetailView extends StatelessWidget {
 
       body: CustomScrollView(
         slivers: [
-          // ───────── HEADER ─────────
+          // 📰 IMAGEN + TITULO
           SliverToBoxAdapter(
             child: Stack(
               children: [
                 if (post.featuredImage != null)
                   Image.network(
                     post.featuredImage!,
-                    height: 260,
+                    height: 280,
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
                 Container(
-                  height: 260,
+                  height: 280,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.6),
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.8),
+                        Colors.black.withOpacity(0.4),
+                        Colors.black.withOpacity(0.9),
                       ],
                     ),
                   ),
@@ -104,9 +102,9 @@ class _PostDetailView extends StatelessWidget {
                     post.title,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 22,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      height: 1.3,
+                      height: 1.4,
                     ),
                   ),
                 ),
@@ -114,20 +112,31 @@ class _PostDetailView extends StatelessWidget {
             ),
           ),
 
-          // ───────── CONTENIDO ─────────
+          // 📰 CONTENIDO
           SliverToBoxAdapter(
             child: Container(
-              transform: Matrix4.translationValues(0, -20, 0),
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFF121212),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
-              child: Html(data: post.content),
+              child: Html(
+                data: post.content,
+                style: {
+                  "body": Style(
+                    color: Colors.white,
+                    fontSize: FontSize(16),
+                    lineHeight: LineHeight(1.6),
+                  ),
+                  "p": Style(color: Colors.white),
+                  "h1": Style(color: Colors.purpleAccent),
+                  "h2": Style(color: Colors.purpleAccent),
+                },
+              ),
             ),
           ),
 
-          // ───────── COMENTARIOS ─────────
+          // 💬 COMENTARIOS
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -136,34 +145,56 @@ class _PostDetailView extends StatelessWidget {
                 children: [
                   const Text(
                     'Comentarios',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
                   BlocBuilder<CommentsBloc, CommentsState>(
                     builder: (context, state) {
                       if (state is CommentsLoading) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.purpleAccent,
+                          ),
+                        );
                       }
 
                       if (state is CommentsLoaded) {
                         if (state.comments.isEmpty) {
-                          return const Text('Sé el primero en comentar 😊');
+                          return const Text(
+                            'Sé el primero en comentar 😊',
+                            style: TextStyle(color: Colors.grey),
+                          );
                         }
 
                         return Column(
                           children: state.comments.map((Comment c) {
                             return Card(
+                              color: const Color(0xFF1E1E1E),
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
-                                leading: const Icon(Icons.person),
-                                title: Text(c.userName),
-                                subtitle: Text(c.content),
+                                leading: const Icon(
+                                  Icons.person,
+                                  color: Colors.purpleAccent,
+                                ),
+                                title: Text(
+                                  c.userName,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                subtitle: Text(
+                                  c.content,
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
                                 trailing: Text(
-                                  DateFormat(
-                                    'dd/MM/yyyy HH:mm',
-                                  ).format(c.createdAt),
-                                  style: const TextStyle(fontSize: 11),
+                                  DateFormat('dd/MM HH:mm').format(c.createdAt),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey,
+                                  ),
                                 ),
                               ),
                             );
@@ -172,7 +203,10 @@ class _PostDetailView extends StatelessWidget {
                       }
 
                       if (state is CommentsError) {
-                        return Text(state.message);
+                        return Text(
+                          state.message,
+                          style: const TextStyle(color: Colors.redAccent),
+                        );
                       }
 
                       return const SizedBox();
@@ -191,7 +225,7 @@ class _PostDetailView extends StatelessWidget {
   }
 }
 
-// ───────── INPUT COMENTARIO ─────────
+// 💬 INPUT COMENTARIO
 class _AddCommentInput extends StatefulWidget {
   final String postId;
   const _AddCommentInput({required this.postId});
@@ -210,18 +244,24 @@ class _AddCommentInputState extends State<_AddCommentInput> {
         Expanded(
           child: TextField(
             controller: ctrl,
-            decoration: const InputDecoration(
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
               hintText: 'Escribe un comentario...',
-              border: OutlineInputBorder(),
+              hintStyle: const TextStyle(color: Colors.grey),
+              filled: true,
+              fillColor: const Color(0xFF1E1E1E),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.send),
+          icon: const Icon(Icons.send, color: Colors.purpleAccent),
           onPressed: () {
             if (ctrl.text.trim().isEmpty) return;
 
-            // Obtener info del usuario desde AuthBloc
             final authState = context.read<AuthBloc>().state;
             String userName = 'Usuario';
             String userId = '1';

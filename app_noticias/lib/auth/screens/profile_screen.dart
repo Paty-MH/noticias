@@ -56,9 +56,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+
       body: BlocConsumer<AuthBloc, AuthState>(
+        /// 🔥 SOLO ESCUCHA ERRORES, LOGOUT Y CAMBIO DE USUARIO
+        listenWhen: (previous, current) {
+          if (current is AuthError || current is AuthUnauthenticated) {
+            return true;
+          }
+
+          if (previous is AuthAuthenticated &&
+              current is AuthAuthenticated &&
+              previous.user != current.user) {
+            return true;
+          }
+
+          return false;
+        },
+
         listener: (context, state) {
-          // ❌ ERROR
+          /// ❌ ERROR
           if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -68,7 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // ✅ PERFIL ACTUALIZADO
+          /// ✅ PERFIL ACTUALIZADO
           if (state is AuthAuthenticated) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -78,50 +94,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // 🚪 LOGOUT → LOGIN
+          /// 🚪 LOGOUT
           if (state is AuthUnauthenticated) {
             Navigator.of(
               context,
-            ).pushNamedAndRemoveUntil('/login', (route) => false);
+            ).pushNamedAndRemoveUntil('/login', (_) => false);
           }
         },
-        builder: (context, state) {
-          if (state is AuthLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
 
+        builder: (context, state) {
           if (state is! AuthAuthenticated) {
             return const Center(child: Text('Usuario no autenticado'));
           }
+
+          final user = state.user;
 
           return Padding(
             padding: const EdgeInsets.all(24),
             child: ListView(
               children: [
-                // 👤 FOTO PERFIL (RECORTE PERFECTO)
+                /// 👤 FOTO PERFIL (ROBUSTA)
                 Center(
                   child: Container(
                     width: 140,
                     height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.grey.shade200,
-                      image: state.user.imageUrl.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(state.user.imageUrl),
-                              fit: BoxFit.cover, // 🔥 CLAVE
-                            )
-                          : null,
+                      color: Colors.grey.shade300,
                     ),
-                    child: state.user.imageUrl.isEmpty
-                        ? const Icon(Icons.person, size: 70, color: Colors.grey)
-                        : null,
+                    clipBehavior: Clip.antiAlias,
+                    child: user.imageUrl.isNotEmpty
+                        ? Image.network(
+                            user.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) {
+                              return const Icon(
+                                Icons.person,
+                                size: 70,
+                                color: Colors.grey,
+                              );
+                            },
+                          )
+                        : const Icon(
+                            Icons.person,
+                            size: 70,
+                            color: Colors.grey,
+                          ),
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
-                // 👤 NOMBRE
+                /// 👤 NOMBRE
                 TextField(
                   controller: nameCtrl,
                   decoration: const InputDecoration(
@@ -129,9 +153,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
-                // 📞 TELÉFONO
+                /// 📞 TELÉFONO
                 TextField(
                   controller: phoneCtrl,
                   keyboardType: TextInputType.phone,
@@ -140,9 +165,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+
                 const SizedBox(height: 12),
 
-                // 🖼 IMAGEN URL
+                /// 🖼 URL IMAGEN
                 TextField(
                   controller: imageCtrl,
                   decoration: const InputDecoration(
@@ -150,9 +176,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+
                 const SizedBox(height: 24),
 
-                // 💾 GUARDAR CAMBIOS
+                /// 💾 GUARDAR
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(

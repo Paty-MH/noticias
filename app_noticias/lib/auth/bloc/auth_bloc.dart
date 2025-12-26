@@ -8,7 +8,7 @@ import '../models/app_user.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService authService;
 
-  AuthBloc(this.authService) : super(AuthInitial()) {
+  AuthBloc(this.authService) : super(const AuthInitial()) {
     on<AppStarted>(_onStart);
     on<LoginRequested>(_onLogin);
     on<RegisterRequested>(_onRegister);
@@ -24,24 +24,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (user != null) {
         emit(AuthAuthenticated(user));
       } else {
-        emit(AuthUnauthenticated());
+        emit(const AuthUnauthenticated());
       }
     } catch (_) {
-      emit(AuthUnauthenticated());
+      emit(const AuthUnauthenticated());
     }
   }
 
   /// 🔐 LOGIN
   Future<void> _onLogin(LoginRequested event, Emitter<AuthState> emit) async {
-    emit(AuthLoading());
+    emit(const AuthLoading());
 
     try {
       final user = await authService.login(event.email, event.password);
-
       emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
-      emit(AuthUnauthenticated());
+      emit(const AuthUnauthenticated());
     }
   }
 
@@ -50,7 +49,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     RegisterRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
+    emit(const AuthLoading());
 
     try {
       final user = await authService.register(
@@ -58,21 +57,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.email,
         event.password,
       );
-
       emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
-      emit(AuthUnauthenticated());
+      emit(const AuthUnauthenticated());
     }
   }
 
-  /// 👤 ACTUALIZAR PERFIL
+  /// 👤 ACTUALIZAR PERFIL (🔥 CLAVE)
   Future<void> _onUpdateProfile(
     UpdateProfileRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(AuthLoading());
-
     try {
       final updatedUser = await authService.updateProfile(
         name: event.name,
@@ -80,6 +76,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         imageUrl: event.imageUrl,
       );
 
+      /// ✅ UN SOLO ESTADO
       emit(AuthAuthenticated(updatedUser));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
@@ -89,6 +86,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   /// 🚪 LOGOUT
   Future<void> _onLogout(LogoutRequested event, Emitter<AuthState> emit) async {
     await authService.logout();
-    emit(AuthUnauthenticated());
+    emit(const AuthUnauthenticated());
   }
 }
