@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+
 import '../bloc/comments_bloc.dart';
 import '../bloc/comments_event.dart';
 import '../bloc/comments_state.dart';
 import '../services/comments_service.dart';
+
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 
@@ -28,7 +31,8 @@ class _CommentsView extends StatefulWidget {
   State<_CommentsView> createState() => _CommentsViewState();
 }
 
-class _CommentsViewState extends State<_CommentsView> {
+class _CommentsViewState extends State<_CommentsView>
+    with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
 
   @override
@@ -40,9 +44,10 @@ class _CommentsViewState extends State<_CommentsView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Comentarios')),
+      appBar: AppBar(title: const Text('Comentarios'), centerTitle: true),
       body: Column(
         children: [
+          /// 💬 LISTA DE COMENTARIOS
           Expanded(
             child: BlocBuilder<CommentsBloc, CommentsState>(
               builder: (context, state) {
@@ -53,24 +58,20 @@ class _CommentsViewState extends State<_CommentsView> {
                 if (state is CommentsLoaded) {
                   if (state.comments.isEmpty) {
                     return const Center(
-                      child: Text('Sé el primero en comentar 😊'),
+                      child: Text(
+                        'Sé el primero en comentar 💬',
+                        style: TextStyle(fontSize: 16),
+                      ),
                     );
                   }
 
                   return ListView.builder(
+                    padding: const EdgeInsets.all(12),
                     reverse: true,
                     itemCount: state.comments.length,
                     itemBuilder: (_, i) {
                       final c = state.comments[i];
-                      return ListTile(
-                        leading: const Icon(Icons.person),
-                        title: Text(c.userName),
-                        subtitle: Text(c.content),
-                        trailing: Text(
-                          '${c.createdAt.hour.toString().padLeft(2, '0')}:${c.createdAt.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      );
+                      return _CommentCard(comment: c);
                     },
                   );
                 }
@@ -84,52 +85,166 @@ class _CommentsViewState extends State<_CommentsView> {
             ),
           ),
 
+          /// ✍️ INPUT
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
+                    maxLines: null,
+                    decoration: InputDecoration(
                       hintText: 'Escribe un comentario...',
-                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () {
-                    final text = _controller.text.trim();
-                    if (text.isEmpty) return;
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  backgroundColor: Colors.blue,
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () {
+                      final text = _controller.text.trim();
+                      if (text.isEmpty) return;
 
-                    // Obtener datos del usuario desde AuthBloc
-                    String userName = 'Usuario';
-                    String userId = '1';
-                    final authState = context.read<AuthBloc>().state;
-                    if (authState is AuthAuthenticated) {
-                      userName = authState.user.name;
-                      userId = authState.user.id;
-                    }
+                      String userName = 'Usuario';
+                      String userId = '1';
 
-                    // Agregar comentario con todos los campos necesarios
-                    context.read<CommentsBloc>().add(
-                      AddComment(
-                        postId: widget.postId,
-                        content: text,
-                        userName: userName,
-                        userId: userId,
-                      ),
-                    );
+                      final authState = context.read<AuthBloc>().state;
+                      if (authState is AuthAuthenticated) {
+                        userName = authState.user.name;
+                        userId = authState.user.id;
+                      }
 
-                    _controller.clear();
-                  },
+                      context.read<CommentsBloc>().add(
+                        AddComment(
+                          postId: widget.postId,
+                          content: text,
+                          userName: userName,
+                          userId: userId,
+                        ),
+                      );
+
+                      _controller.clear();
+                    },
+                  ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// ❤️ CARD DEL COMENTARIO
+class _CommentCard extends StatefulWidget {
+  final dynamic comment;
+  const _CommentCard({required this.comment});
+
+  @override
+  State<_CommentCard> createState() => _CommentCardState();
+}
+
+class _CommentCardState extends State<_CommentCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scale;
+
+  bool liked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      lowerBound: 0.8,
+      upperBound: 1.2,
+    );
+    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onLike() {
+    setState(() => liked = !liked);
+    _controller.forward(from: 0.8);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.comment;
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// 👤 AVATAR
+            CircleAvatar(
+              backgroundColor: Colors.blue.shade100,
+              child: Text(
+                c.userName.isNotEmpty ? c.userName[0].toUpperCase() : '?',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            /// 💬 TEXTO
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    c.userName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(c.content),
+                  const SizedBox(height: 6),
+                  Text(
+                    DateFormat('dd MMM · HH:mm').format(c.createdAt),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+
+            /// ❤️ LIKE
+            GestureDetector(
+              onTap: _onLike,
+              child: ScaleTransition(
+                scale: _scale,
+                child: Icon(
+                  liked ? Icons.favorite : Icons.favorite_border,
+                  color: liked ? Colors.red : Colors.grey,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -14,6 +14,7 @@ import '../comments/bloc/comments_event.dart';
 import '../comments/bloc/comments_state.dart';
 import '../comments/models/comment_model.dart';
 import '../comments/services/comments_service.dart';
+import '../comments/widgets/comment_like_button.dart';
 
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
@@ -49,29 +50,8 @@ class _PostDetailView extends StatelessWidget {
         backgroundColor: Colors.black.withOpacity(0.7),
         elevation: 0,
         title: const Text('Newsnap'),
-        actions: [
-          BlocBuilder<NewsBloc, NewsState>(
-            buildWhen: (_, state) => state is NewsLoaded,
-            builder: (context, state) {
-              if (state is! NewsLoaded) return const SizedBox();
-
-              final isBookmarked = state.bookmarks.contains(post.id);
-
-              return IconButton(
-                icon: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: Colors.purpleAccent,
-                ),
-                onPressed: () {
-                  context.read<NewsBloc>().add(ToggleBookmark(post));
-                },
-              );
-            },
-          ),
-        ],
       ),
 
-      // 📄 BODY
       body: CustomScrollView(
         slivers: [
           // 🖼️ IMAGEN
@@ -85,7 +65,6 @@ class _PostDetailView extends StatelessWidget {
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
-
                 Container(
                   height: 280,
                   decoration: BoxDecoration(
@@ -99,7 +78,6 @@ class _PostDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 Positioned(
                   left: 16,
                   right: 16,
@@ -133,8 +111,6 @@ class _PostDetailView extends StatelessWidget {
                     fontSize: FontSize(16),
                     lineHeight: LineHeight(1.6),
                   ),
-                  "h1": Style(color: Colors.purpleAccent),
-                  "h2": Style(color: Colors.purpleAccent),
                 },
               ),
             ),
@@ -144,88 +120,111 @@ class _PostDetailView extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Comentarios',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+              child: BlocBuilder<CommentsBloc, CommentsState>(
+                builder: (context, state) {
+                  if (state is! CommentsLoaded) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.purpleAccent,
+                      ),
+                    );
+                  }
 
-                  const SizedBox(height: 12),
+                  if (state.comments.isEmpty) {
+                    return const Text(
+                      'Sé el primero en comentar 😊',
+                      style: TextStyle(color: Colors.grey),
+                    );
+                  }
 
-                  BlocBuilder<CommentsBloc, CommentsState>(
-                    builder: (context, state) {
-                      // ❌ ERROR
-                      if (state is CommentsError) {
-                        return Text(
-                          state.message,
-                          style: const TextStyle(color: Colors.redAccent),
-                        );
-                      }
-
-                      // ⏳ AÚN NO LLEGAN DATOS
-                      if (state is! CommentsLoaded) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.purpleAccent,
-                          ),
-                        );
-                      }
-
-                      // 💤 SIN COMENTARIOS
-                      if (state.comments.isEmpty) {
-                        return const Text(
-                          'Sé el primero en comentar 😊',
-                          style: TextStyle(color: Colors.grey),
-                        );
-                      }
-
-                      // ✅ LISTA
-                      return Column(
-                        children: state.comments.map((Comment c) {
-                          final date = c.createdAt ?? DateTime.now();
-
-                          return Card(
-                            color: const Color(0xFF1E1E1E),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.person,
-                                color: Colors.purpleAccent,
-                              ),
-                              title: Text(
-                                c.userName,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                              subtitle: Text(
-                                c.content,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              trailing: Text(
-                                DateFormat('dd/MM HH:mm').format(date),
+                  return Column(
+                    children: state.comments.map((Comment c) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 👤 AVATAR
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: Colors.purpleAccent,
+                              child: Text(
+                                c.userName.isNotEmpty
+                                    ? c.userName[0].toUpperCase()
+                                    : '?',
                                 style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                          );
-                        }).toList(),
+
+                            const SizedBox(width: 12),
+
+                            // 💬 BURBUJA
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E1E),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      c.userName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      c.content,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+
+                                    // ❤️ LIKE + FECHA
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        CommentLikeButton(comment: c),
+                                        Text(
+                                          DateFormat(
+                                            'dd MMM · HH:mm',
+                                          ).format(c.createdAt),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ✍️ INPUT
-                  _AddCommentInput(postId: post.id.toString()),
-                ],
+                    }).toList(),
+                  );
+                },
               ),
+            ),
+          ),
+
+          // ✍️ INPUT
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: _AddCommentInput(postId: post.id.toString()),
             ),
           ),
         ],
@@ -267,7 +266,6 @@ class _AddCommentInputState extends State<_AddCommentInput> {
             ),
           ),
         ),
-
         IconButton(
           icon: const Icon(Icons.send, color: Colors.purpleAccent),
           onPressed: () {

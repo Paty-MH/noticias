@@ -8,7 +8,6 @@ class Comment {
   final String userId;
   final DateTime createdAt;
   final List<String> likedBy;
-  final int likesCount;
 
   Comment({
     required this.id,
@@ -18,8 +17,10 @@ class Comment {
     required this.userId,
     required this.createdAt,
     required this.likedBy,
-    required this.likesCount,
   });
+
+  /// 👍 Likes calculados (NO se guardan en Firestore)
+  int get likesCount => likedBy.length;
 
   factory Comment.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -28,11 +29,10 @@ class Comment {
       id: doc.id,
       postId: data['postId'] ?? '',
       content: data['content'] ?? '',
-      userName: data['userName'] ?? '',
+      userName: data['userName'] ?? 'Usuario',
       userId: data['userId'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       likedBy: List<String>.from(data['likedBy'] ?? []),
-      likesCount: data['likesCount'] ?? 0,
     );
   }
 }
