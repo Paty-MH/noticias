@@ -33,10 +33,19 @@ class AddComment extends CommentsEvent {
   List<Object?> get props => [postId, content, userName, userId];
 }
 
-/// Evento privado para actualizar comentarios desde el stream
-class _CommentsUpdated extends CommentsEvent {
+class ToggleLikeComment extends CommentsEvent {
+  final Comment comment;
+  final String userId;
+
+  const ToggleLikeComment({required this.comment, required this.userId});
+
+  @override
+  List<Object?> get props => [comment, userId];
+}
+
+class CommentsUpdated extends CommentsEvent {
   final List<Comment> comments;
-  const _CommentsUpdated(this.comments);
+  const CommentsUpdated(this.comments);
 
   @override
   List<Object?> get props => [comments];

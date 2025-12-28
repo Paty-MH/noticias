@@ -14,6 +14,7 @@ import '../comments/bloc/comments_event.dart';
 import '../comments/bloc/comments_state.dart';
 import '../comments/models/comment_model.dart';
 import '../comments/services/comments_service.dart';
+
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
 
@@ -43,6 +44,7 @@ class _PostDetailView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
 
+      // 🔝 APPBAR
       appBar: AppBar(
         backgroundColor: Colors.black.withOpacity(0.7),
         elevation: 0,
@@ -60,17 +62,19 @@ class _PostDetailView extends StatelessWidget {
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   color: Colors.purpleAccent,
                 ),
-                onPressed: () =>
-                    context.read<NewsBloc>().add(ToggleBookmark(post)),
+                onPressed: () {
+                  context.read<NewsBloc>().add(ToggleBookmark(post));
+                },
               );
             },
           ),
         ],
       ),
 
+      // 📄 BODY
       body: CustomScrollView(
         slivers: [
-          // 📰 IMAGEN + TITULO
+          // 🖼️ IMAGEN
           SliverToBoxAdapter(
             child: Stack(
               children: [
@@ -81,6 +85,7 @@ class _PostDetailView extends StatelessWidget {
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
+
                 Container(
                   height: 280,
                   decoration: BoxDecoration(
@@ -94,6 +99,7 @@ class _PostDetailView extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 Positioned(
                   left: 16,
                   right: 16,
@@ -104,7 +110,6 @@ class _PostDetailView extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      height: 1.4,
                     ),
                   ),
                 ),
@@ -128,7 +133,6 @@ class _PostDetailView extends StatelessWidget {
                     fontSize: FontSize(16),
                     lineHeight: LineHeight(1.6),
                   ),
-                  "p": Style(color: Colors.white),
                   "h1": Style(color: Colors.purpleAccent),
                   "h2": Style(color: Colors.purpleAccent),
                 },
@@ -151,57 +155,12 @@ class _PostDetailView extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 12),
 
                   BlocBuilder<CommentsBloc, CommentsState>(
                     builder: (context, state) {
-                      if (state is CommentsLoading) {
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.purpleAccent,
-                          ),
-                        );
-                      }
-
-                      if (state is CommentsLoaded) {
-                        if (state.comments.isEmpty) {
-                          return const Text(
-                            'Sé el primero en comentar 😊',
-                            style: TextStyle(color: Colors.grey),
-                          );
-                        }
-
-                        return Column(
-                          children: state.comments.map((Comment c) {
-                            return Card(
-                              color: const Color(0xFF1E1E1E),
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: const Icon(
-                                  Icons.person,
-                                  color: Colors.purpleAccent,
-                                ),
-                                title: Text(
-                                  c.userName,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                                subtitle: Text(
-                                  c.content,
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                                trailing: Text(
-                                  DateFormat('dd/MM HH:mm').format(c.createdAt),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      }
-
+                      // ❌ ERROR
                       if (state is CommentsError) {
                         return Text(
                           state.message,
@@ -209,11 +168,61 @@ class _PostDetailView extends StatelessWidget {
                         );
                       }
 
-                      return const SizedBox();
+                      // ⏳ AÚN NO LLEGAN DATOS
+                      if (state is! CommentsLoaded) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.purpleAccent,
+                          ),
+                        );
+                      }
+
+                      // 💤 SIN COMENTARIOS
+                      if (state.comments.isEmpty) {
+                        return const Text(
+                          'Sé el primero en comentar 😊',
+                          style: TextStyle(color: Colors.grey),
+                        );
+                      }
+
+                      // ✅ LISTA
+                      return Column(
+                        children: state.comments.map((Comment c) {
+                          final date = c.createdAt ?? DateTime.now();
+
+                          return Card(
+                            color: const Color(0xFF1E1E1E),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.person,
+                                color: Colors.purpleAccent,
+                              ),
+                              title: Text(
+                                c.userName,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              subtitle: Text(
+                                c.content,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                              trailing: Text(
+                                DateFormat('dd/MM HH:mm').format(date),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
                     },
                   ),
 
                   const SizedBox(height: 16),
+
+                  // ✍️ INPUT
                   _AddCommentInput(postId: post.id.toString()),
                 ],
               ),
@@ -225,9 +234,10 @@ class _PostDetailView extends StatelessWidget {
   }
 }
 
-// 💬 INPUT COMENTARIO
+// ✍️ INPUT
 class _AddCommentInput extends StatefulWidget {
   final String postId;
+
   const _AddCommentInput({required this.postId});
 
   @override
@@ -257,14 +267,16 @@ class _AddCommentInputState extends State<_AddCommentInput> {
             ),
           ),
         ),
+
         IconButton(
           icon: const Icon(Icons.send, color: Colors.purpleAccent),
           onPressed: () {
             if (ctrl.text.trim().isEmpty) return;
 
             final authState = context.read<AuthBloc>().state;
+
             String userName = 'Usuario';
-            String userId = '1';
+            String userId = 'anon';
 
             if (authState is AuthAuthenticated) {
               userName = authState.user.name;

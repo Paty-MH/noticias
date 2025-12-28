@@ -7,66 +7,56 @@ import 'comments_state.dart';
 
 class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
   final CommentsService service;
-  StreamSubscription<List<Comment>>? _commentsSub;
+  StreamSubscription<List<Comment>>? _sub;
 
   CommentsBloc(this.service) : super(CommentsLoading()) {
-    on<LoadComments>(_onLoadComments);
-    on<AddComment>(_onAddComment);
-    on<_CommentsUpdated>(_onCommentsUpdated);
+    on<LoadComments>(_onLoad);
+    on<AddComment>(_onAdd);
+    on<ToggleLikeComment>(_onToggleLike);
+    on<CommentsUpdated>(_onUpdated);
   }
 
-  // 🔹 Cargar comentarios en tiempo real
-  void _onLoadComments(LoadComments event, Emitter<CommentsState> emit) async {
-    emit(CommentsLoading());
+  void _onLoad(LoadComments event, Emitter<CommentsState> emit) async {
+    await _sub?.cancel();
 
-    await _commentsSub?.cancel();
-    _commentsSub = service
+    // ✅ Evita loading infinito
+    emit(const CommentsLoaded([]));
+
+    _sub = service
         .streamComments(event.postId)
         .listen(
           (comments) {
-            add(_CommentsUpdated(comments));
+            add(CommentsUpdated(comments));
           },
           onError: (error) {
-            emit(CommentsError('Error al cargar comentarios: $error'));
+            emit(CommentsError(error.toString()));
           },
         );
   }
 
-  // 🔹 Agregar comentario
-  Future<void> _onAddComment(
-    AddComment event,
-    Emitter<CommentsState> emit,
-  ) async {
-    try {
-      await service.addComment(
-        postId: event.postId,
-        content: event.content,
-        userName: event.userName,
-        userId: event.userId,
-      );
-      // No necesitamos recargar; el stream actualizará automáticamente
-    } catch (e) {
-      emit(CommentsError('No se pudo enviar el comentario: $e'));
-    }
+  Future<void> _onAdd(AddComment event, Emitter<CommentsState> emit) async {
+    await service.addComment(
+      postId: event.postId,
+      content: event.content,
+      userName: event.userName,
+      userId: event.userId,
+    );
   }
 
-  // 🔹 Actualizar comentarios desde el stream
-  void _onCommentsUpdated(_CommentsUpdated event, Emitter<CommentsState> emit) {
+  Future<void> _onToggleLike(
+    ToggleLikeComment event,
+    Emitter<CommentsState> emit,
+  ) async {
+    await service.toggleLike(comment: event.comment, userId: event.userId);
+  }
+
+  void _onUpdated(CommentsUpdated event, Emitter<CommentsState> emit) {
     emit(CommentsLoaded(event.comments));
   }
 
   @override
   Future<void> close() {
-    _commentsSub?.cancel();
+    _sub?.cancel();
     return super.close();
   }
-}
-
-/// Evento privado para actualizar comentarios desde el stream
-class _CommentsUpdated extends CommentsEvent {
-  final List<Comment> comments;
-  _CommentsUpdated(this.comments);
-
-  @override
-  List<Object?> get props => [comments];
 }

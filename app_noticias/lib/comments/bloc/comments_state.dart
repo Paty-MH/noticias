@@ -15,7 +15,7 @@ class CommentsLoaded extends CommentsState {
   const CommentsLoaded(this.comments);
 
   @override
-  List<Object?> get props => comments;
+  List<Object?> get props => [comments];
 }
 
 class CommentsError extends CommentsState {
