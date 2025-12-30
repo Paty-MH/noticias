@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  bool _obscurePassword = true; // 👁️ controlar visibilidad
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -30,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() {
     if (!_formKey.currentState!.validate()) return;
+
     context.read<AuthBloc>().add(
       LoginRequested(emailCtrl.text.trim(), passCtrl.text.trim()),
     );
@@ -41,13 +42,20 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.black,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthError)
+          /// ❌ ERROR LOGIN
+          if (state is AuthError) {
             NotificationService.error(context, state.message);
+          }
+
+          /// ✅ LOGIN CORRECTO
           if (state is AuthAuthenticated) {
             NotificationService.success(
               context,
               'Bienvenido ${state.user.name} 🎉',
             );
+
+            // 🔁 IR A HOME
+            Navigator.pushReplacementNamed(context, '/home');
           }
         },
         child: Center(
@@ -65,6 +73,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
+
+                /// 🧾 CARD
                 Card(
                   color: Colors.grey[900],
                   shape: RoundedRectangleBorder(
@@ -76,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
-                          // EMAIL
+                          /// 📧 EMAIL
                           TextFormField(
                             controller: emailCtrl,
                             keyboardType: TextInputType.emailAddress,
@@ -86,26 +96,29 @@ class _LoginScreenState extends State<LoginScreen> {
                               labelStyle: const TextStyle(
                                 color: Colors.purpleAccent,
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
                                   color: Colors.purpleAccent,
                                 ),
                               ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Ingresa tu email';
-                              if (!v.contains('@')) return 'Email inválido';
+                              }
+                              if (!v.contains('@')) {
+                                return 'Email inválido';
+                              }
                               return null;
                             },
                           ),
                           const SizedBox(height: 16),
 
-                          // PASSWORD con ojo
+                          /// 🔐 PASSWORD
                           TextFormField(
                             controller: passCtrl,
                             obscureText: _obscurePassword,
@@ -115,14 +128,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               labelStyle: const TextStyle(
                                 color: Colors.purpleAccent,
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
                                   color: Colors.purpleAccent,
                                 ),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
@@ -139,21 +152,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty)
+                              if (v == null || v.isEmpty) {
                                 return 'Ingresa tu contraseña';
-                              if (v.length < 6) return 'Contraseña inválida';
+                              }
+                              if (v.length < 6) {
+                                return 'Contraseña inválida';
+                              }
                               return null;
                             },
                           ),
                           const SizedBox(height: 24),
 
+                          /// 🔘 BOTÓN LOGIN
                           BlocBuilder<AuthBloc, AuthState>(
                             builder: (_, state) {
                               if (state is AuthLoading) {
-                                return const Center(
-                                  child: CircularProgressIndicator(),
-                                );
+                                return const CircularProgressIndicator();
                               }
+
                               return SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -178,7 +194,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               );
                             },
                           ),
+
                           const SizedBox(height: 12),
+
+                          /// ➕ REGISTRO
                           TextButton(
                             onPressed: () {
                               Navigator.push(

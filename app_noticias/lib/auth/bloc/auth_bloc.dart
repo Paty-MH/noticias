@@ -8,7 +8,7 @@ import '../models/app_user.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService authService;
 
-  AuthBloc(this.authService) : super(const AuthInitial()) {
+  AuthBloc(this.authService) : super(AuthInitial()) {
     on<AppStarted>(_onStart);
     on<LoginRequested>(_onLogin);
     on<RegisterRequested>(_onRegister);
@@ -16,41 +16,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UpdateProfileRequested>(_onUpdateProfile);
   }
 
-  /// 🔁 AL INICIAR LA APP
+  /// 🔁 INICIO APP
   Future<void> _onStart(AppStarted event, Emitter<AuthState> emit) async {
     try {
-      final AppUser? user = await authService.getCurrentUser();
-
+      final user = await authService.getCurrentUser();
       if (user != null) {
         emit(AuthAuthenticated(user));
       } else {
-        emit(const AuthUnauthenticated());
+        emit(AuthUnauthenticated());
       }
     } catch (_) {
-      emit(const AuthUnauthenticated());
+      emit(AuthUnauthenticated());
     }
   }
 
   /// 🔐 LOGIN
   Future<void> _onLogin(LoginRequested event, Emitter<AuthState> emit) async {
-    emit(const AuthLoading());
-
+    emit(AuthLoading());
     try {
       final user = await authService.login(event.email, event.password);
       emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
-      emit(const AuthUnauthenticated());
     }
   }
 
-  /// 📝 REGISTRO
+  /// 📝 REGISTER
   Future<void> _onRegister(
     RegisterRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
-
+    emit(AuthLoading());
     try {
       final user = await authService.register(
         event.name,
@@ -60,24 +56,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
-      emit(const AuthUnauthenticated());
     }
   }
 
-  /// 👤 ACTUALIZAR PERFIL (🔥 CLAVE)
+  /// ✏️ UPDATE PROFILE
   Future<void> _onUpdateProfile(
     UpdateProfileRequested event,
     Emitter<AuthState> emit,
   ) async {
+    emit(AuthLoading());
     try {
-      final updatedUser = await authService.updateProfile(
+      final user = await authService.updateProfile(
         name: event.name,
         phone: event.phone,
         imageUrl: event.imageUrl,
       );
-
-      /// ✅ UN SOLO ESTADO
-      emit(AuthAuthenticated(updatedUser));
+      emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
     }
@@ -86,6 +80,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   /// 🚪 LOGOUT
   Future<void> _onLogout(LogoutRequested event, Emitter<AuthState> emit) async {
     await authService.logout();
-    emit(const AuthUnauthenticated());
+    emit(AuthUnauthenticated());
   }
 }

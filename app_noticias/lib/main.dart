@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
 import 'firebase_options.dart';
 
@@ -17,11 +18,18 @@ import 'screens/main_navigation.dart';
 import 'auth/screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 
+import 'notifications/services/notification_service.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  /// 🔥 INICIALIZAR FIREBASE (OBLIGATORIO)
+  /// 🔥 Inicializar Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  /// 🔔 Inicializar NOTIFICACIONES (solo Android / iOS)
+  if (!kIsWeb) {
+    await NotificationService.initialize();
+  }
 
   runApp(const NewsApp());
 }
@@ -43,7 +51,7 @@ class NewsApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'NewsApp',
+        title: 'Newsnap',
 
         themeMode: ThemeMode.system,
 

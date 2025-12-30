@@ -1,55 +1,19 @@
-import 'package:equatable/equatable.dart';
 import '../models/app_user.dart';
 
-/// Estados base de autenticación
-abstract class AuthState extends Equatable {
-  const AuthState();
+abstract class AuthState {}
 
-  @override
-  List<Object?> get props => [];
-}
+class AuthInitial extends AuthState {}
 
-/// Estado inicial
-class AuthInitial extends AuthState {
-  const AuthInitial();
-}
+class AuthLoading extends AuthState {}
 
-/// Cargando (login, registro, update, etc.)
-class AuthLoading extends AuthState {
-  const AuthLoading();
-}
-
-/// Usuario autenticado (login / sesión activa)
 class AuthAuthenticated extends AuthState {
   final AppUser user;
-
-  const AuthAuthenticated(this.user);
-
-  @override
-  List<Object?> get props => [user];
+  AuthAuthenticated(this.user);
 }
 
-/// Usuario no autenticado (logout)
-class AuthUnauthenticated extends AuthState {
-  const AuthUnauthenticated();
-}
+class AuthUnauthenticated extends AuthState {}
 
-/// ✅ Perfil actualizado correctamente
-class AuthProfileUpdated extends AuthState {
-  final AppUser user;
-
-  const AuthProfileUpdated(this.user);
-
-  @override
-  List<Object?> get props => [user];
-}
-
-/// ❌ Error general
 class AuthError extends AuthState {
   final String message;
-
-  const AuthError(this.message);
-
-  @override
-  List<Object?> get props => [message];
+  AuthError(this.message);
 }

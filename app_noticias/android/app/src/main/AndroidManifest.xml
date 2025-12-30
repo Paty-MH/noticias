@@ -1,14 +1,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.app_noticias">
 
-    <!-- 🔥 PERMISO INTERNET (OBLIGATORIO) -->
+    <!-- 🌐 INTERNET -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- 🔔 NOTIFICACIONES (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- 🔥 Firebase recibe mensajes -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
         android:label="App Noticias"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- 🚀 MAIN ACTIVITY -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,10 +39,29 @@
 
         </activity>
 
+        <!-- 🔥 Firebase Messaging Service -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
         <!-- Flutter embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- 🔥 Default notification icon (evita crash) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
+        <!-- 🔥 Default notification color -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/purple_500" />
 
     </application>
 

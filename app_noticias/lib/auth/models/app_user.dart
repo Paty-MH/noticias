@@ -1,5 +1,5 @@
 class AppUser {
-  final String id; // 🔑 Firebase UID
+  final String id;
   final String name;
   final String email;
   final String phone;
@@ -13,7 +13,6 @@ class AppUser {
     required this.imageUrl,
   });
 
-  // 🔁 COPY WITH (editar perfil)
   AppUser copyWith({String? name, String? phone, String? imageUrl}) {
     return AppUser(
       id: id,
@@ -24,7 +23,6 @@ class AppUser {
     );
   }
 
-  // 📦 FROM FIRESTORE
   factory AppUser.fromFirestore(String uid, Map<String, dynamic> data) {
     return AppUser(
       id: uid,
@@ -35,7 +33,6 @@ class AppUser {
     );
   }
 
-  // 📤 TO FIRESTORE
   Map<String, dynamic> toMap() {
     return {'name': name, 'email': email, 'phone': phone, 'imageUrl': imageUrl};
   }

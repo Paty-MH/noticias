@@ -1,13 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../models/app_user.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+  final _db = FirebaseFirestore.instance;
 
-  /// 🔁 SESIÓN ACTIVA
   Future<AppUser?> getCurrentUser() async {
     final user = _auth.currentUser;
     if (user == null) return null;
@@ -18,7 +16,6 @@ class AuthService {
     return AppUser.fromFirestore(user.uid, doc.data()!);
   }
 
-  /// 🔐 LOGIN
   Future<AppUser> login(String email, String password) async {
     try {
       final cred = await _auth.signInWithEmailAndPassword(
@@ -26,19 +23,18 @@ class AuthService {
         password: password,
       );
 
-      final user = cred.user!;
-      final doc = await _db.collection('users').doc(user.uid).get();
+      final doc = await _db.collection('users').doc(cred.user!.uid).get();
 
       if (!doc.exists) {
-        throw Exception('Usuario no encontrado en la base de datos');
+        throw Exception('Usuario no encontrado');
       }
 
-      return AppUser.fromFirestore(user.uid, doc.data()!);
+      return AppUser.fromFirestore(cred.user!.uid, doc.data()!);
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        throw Exception('No existe una cuenta con este correo');
-      } else if (e.code == 'wrong-password') {
+      if (e.code == 'wrong-password') {
         throw Exception('Contraseña incorrecta');
+      } else if (e.code == 'user-not-found') {
+        throw Exception('No existe una cuenta con este correo');
       } else if (e.code == 'invalid-email') {
         throw Exception('Correo inválido');
       } else {
@@ -47,7 +43,6 @@ class AuthService {
     }
   }
 
-  /// 📝 REGISTER
   Future<AppUser> register(String name, String email, String password) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
@@ -55,55 +50,43 @@ class AuthService {
         password: password,
       );
 
-      final user = cred.user!;
-
-      final appUser = AppUser(
-        id: user.uid,
+      final user = AppUser(
+        id: cred.user!.uid,
         name: name,
         email: email,
         phone: '',
         imageUrl: '',
       );
 
-      await _db.collection('users').doc(user.uid).set(appUser.toMap());
-
-      return appUser;
+      await _db.collection('users').doc(user.id).set(user.toMap());
+      return user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
         throw Exception('Este correo ya está registrado');
       } else if (e.code == 'weak-password') {
         throw Exception('La contraseña es muy débil');
-      } else if (e.code == 'invalid-email') {
-        throw Exception('El correo no es válido');
       } else {
         throw Exception('Error al registrar usuario');
       }
     }
   }
 
-  /// ✏️ UPDATE PROFILE
   Future<AppUser> updateProfile({
     required String name,
     required String phone,
     required String imageUrl,
   }) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('No hay sesión activa');
-    }
-
+    final user = _auth.currentUser!;
     await _db.collection('users').doc(user.uid).update({
       'name': name,
       'phone': phone,
       'imageUrl': imageUrl,
     });
 
-    final updatedDoc = await _db.collection('users').doc(user.uid).get();
-
-    return AppUser.fromFirestore(user.uid, updatedDoc.data()!);
+    final doc = await _db.collection('users').doc(user.uid).get();
+    return AppUser.fromFirestore(user.uid, doc.data()!);
   }
 
-  /// 🚪 LOGOUT
   Future<void> logout() async {
     await _auth.signOut();
   }
