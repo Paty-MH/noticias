@@ -42,19 +42,20 @@ class _PostDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final currentUserId = authState is AuthAuthenticated
+        ? authState.user.id
+        : 'anon';
+
     return Scaffold(
       backgroundColor: Colors.black,
-
-      // 🔝 APPBAR
       appBar: AppBar(
         backgroundColor: Colors.black.withOpacity(0.7),
         elevation: 0,
         title: const Text('Newsnap'),
       ),
-
       body: CustomScrollView(
         slivers: [
-          // 🖼️ IMAGEN
           SliverToBoxAdapter(
             child: Stack(
               children: [
@@ -94,8 +95,6 @@ class _PostDetailView extends StatelessWidget {
               ],
             ),
           ),
-
-          // 📰 CONTENIDO
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.all(20),
@@ -115,8 +114,6 @@ class _PostDetailView extends StatelessWidget {
               ),
             ),
           ),
-
-          // 💬 COMENTARIOS
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -139,6 +136,7 @@ class _PostDetailView extends StatelessWidget {
 
                   return Column(
                     children: state.comments.map((Comment c) {
+                      final isAuthor = currentUserId == c.userId;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 14),
                         child: Row(
@@ -158,10 +156,7 @@ class _PostDetailView extends StatelessWidget {
                                 ),
                               ),
                             ),
-
                             const SizedBox(width: 12),
-
-                            // 💬 BURBUJA
                             Expanded(
                               child: Container(
                                 padding: const EdgeInsets.all(14),
@@ -188,8 +183,6 @@ class _PostDetailView extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-
-                                    // ❤️ LIKE + FECHA
                                     Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
@@ -206,6 +199,121 @@ class _PostDetailView extends StatelessWidget {
                                         ),
                                       ],
                                     ),
+                                    if (isAuthor)
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              color: Colors.blue,
+                                              size: 20,
+                                            ),
+                                            onPressed: () async {
+                                              final controller =
+                                                  TextEditingController(
+                                                    text: c.content,
+                                                  );
+                                              final result =
+                                                  await showDialog<String>(
+                                                    context: context,
+                                                    builder: (_) => AlertDialog(
+                                                      title: const Text(
+                                                        'Editar comentario',
+                                                      ),
+                                                      content: TextField(
+                                                        controller: controller,
+                                                        maxLines: null,
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                context,
+                                                              ),
+                                                          child: const Text(
+                                                            'Cancelar',
+                                                          ),
+                                                        ),
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                context,
+                                                                controller.text,
+                                                              ),
+                                                          child: const Text(
+                                                            'Guardar',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+
+                                              if (result != null &&
+                                                  result.trim().isNotEmpty) {
+                                                context
+                                                    .read<CommentsBloc>()
+                                                    .add(
+                                                      EditComment(
+                                                        commentId: c.id,
+                                                        newContent: result
+                                                            .trim(),
+                                                      ),
+                                                    );
+                                              }
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.delete,
+                                              color: Colors.red,
+                                              size: 20,
+                                            ),
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (_) => AlertDialog(
+                                                  title: const Text(
+                                                    'Eliminar comentario',
+                                                  ),
+                                                  content: const Text(
+                                                    '¿Estás seguro de eliminar este comentario?',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                            context,
+                                                          ),
+                                                      child: const Text(
+                                                        'Cancelar',
+                                                      ),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        context
+                                                            .read<
+                                                              CommentsBloc
+                                                            >()
+                                                            .add(
+                                                              DeleteComment(
+                                                                c.id,
+                                                              ),
+                                                            );
+                                                        Navigator.pop(context);
+                                                      },
+                                                      child: const Text(
+                                                        'Eliminar',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
                                   ],
                                 ),
                               ),
@@ -219,8 +327,6 @@ class _PostDetailView extends StatelessWidget {
               ),
             ),
           ),
-
-          // ✍️ INPUT
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -233,7 +339,6 @@ class _PostDetailView extends StatelessWidget {
   }
 }
 
-// ✍️ INPUT
 class _AddCommentInput extends StatefulWidget {
   final String postId;
 

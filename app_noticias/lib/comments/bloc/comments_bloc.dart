@@ -14,23 +14,19 @@ class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
     on<AddComment>(_onAdd);
     on<ToggleLikeComment>(_onToggleLike);
     on<CommentsUpdated>(_onUpdated);
+    on<DeleteComment>(_onDelete);
+    on<EditComment>(_onEdit);
   }
 
   void _onLoad(LoadComments event, Emitter<CommentsState> emit) async {
     await _sub?.cancel();
-
-    // ✅ Evita loading infinito
     emit(const CommentsLoaded([]));
 
     _sub = service
         .streamComments(event.postId)
         .listen(
-          (comments) {
-            add(CommentsUpdated(comments));
-          },
-          onError: (error) {
-            emit(CommentsError(error.toString()));
-          },
+          (comments) => add(CommentsUpdated(comments)),
+          onError: (error) => emit(CommentsError(error.toString())),
         );
   }
 
@@ -48,6 +44,20 @@ class CommentsBloc extends Bloc<CommentsEvent, CommentsState> {
     Emitter<CommentsState> emit,
   ) async {
     await service.toggleLike(comment: event.comment, userId: event.userId);
+  }
+
+  Future<void> _onDelete(
+    DeleteComment event,
+    Emitter<CommentsState> emit,
+  ) async {
+    await service.deleteComment(event.commentId);
+  }
+
+  Future<void> _onEdit(EditComment event, Emitter<CommentsState> emit) async {
+    await service.editComment(
+      commentId: event.commentId,
+      newContent: event.newContent,
+    );
   }
 
   void _onUpdated(CommentsUpdated event, Emitter<CommentsState> emit) {

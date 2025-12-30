@@ -6,9 +6,9 @@ import '../bloc/comments_bloc.dart';
 import '../bloc/comments_event.dart';
 import '../bloc/comments_state.dart';
 import '../services/comments_service.dart';
-
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_state.dart';
+import '../models/comment_model.dart';
 
 class CommentsScreen extends StatelessWidget {
   final String postId;
@@ -31,8 +31,7 @@ class _CommentsView extends StatefulWidget {
   State<_CommentsView> createState() => _CommentsViewState();
 }
 
-class _CommentsViewState extends State<_CommentsView>
-    with TickerProviderStateMixin {
+class _CommentsViewState extends State<_CommentsView> {
   final TextEditingController _controller = TextEditingController();
 
   @override
@@ -43,49 +42,47 @@ class _CommentsViewState extends State<_CommentsView>
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final currentUserId = authState is AuthAuthenticated
+        ? authState.user.id
+        : 'anon';
+
     return Scaffold(
       appBar: AppBar(title: const Text('Comentarios'), centerTitle: true),
       body: Column(
         children: [
-          /// 💬 LISTA DE COMENTARIOS
           Expanded(
             child: BlocBuilder<CommentsBloc, CommentsState>(
               builder: (context, state) {
                 if (state is CommentsLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (state is CommentsLoaded) {
                   if (state.comments.isEmpty) {
                     return const Center(
-                      child: Text(
-                        'Sé el primero en comentar 💬',
-                        style: TextStyle(fontSize: 16),
-                      ),
+                      child: Text('Sé el primero en comentar 💬'),
                     );
                   }
-
                   return ListView.builder(
                     padding: const EdgeInsets.all(12),
                     reverse: true,
                     itemCount: state.comments.length,
                     itemBuilder: (_, i) {
-                      final c = state.comments[i];
-                      return _CommentCard(comment: c);
+                      final comment = state.comments[i];
+                      return _CommentCard(
+                        comment: comment,
+                        currentUserId: currentUserId,
+                      );
                     },
                   );
                 }
-
                 if (state is CommentsError) {
                   return Center(child: Text(state.message));
                 }
-
                 return const SizedBox();
               },
             ),
           ),
-
-          /// ✍️ INPUT
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(10),
@@ -122,7 +119,6 @@ class _CommentsViewState extends State<_CommentsView>
                       String userName = 'Usuario';
                       String userId = '1';
 
-                      final authState = context.read<AuthBloc>().state;
                       if (authState is AuthAuthenticated) {
                         userName = authState.user.name;
                         userId = authState.user.id;
@@ -150,10 +146,11 @@ class _CommentsViewState extends State<_CommentsView>
   }
 }
 
-/// ❤️ CARD DEL COMENTARIO
+/// CARD DE COMENTARIO CON EDITAR Y ELIMINAR
 class _CommentCard extends StatefulWidget {
-  final dynamic comment;
-  const _CommentCard({required this.comment});
+  final Comment comment;
+  final String currentUserId;
+  const _CommentCard({required this.comment, required this.currentUserId});
 
   @override
   State<_CommentCard> createState() => _CommentCardState();
@@ -163,7 +160,6 @@ class _CommentCardState extends State<_CommentCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scale;
-
   bool liked = false;
 
   @override
@@ -176,6 +172,7 @@ class _CommentCardState extends State<_CommentCard>
       upperBound: 1.2,
     );
     _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    liked = widget.comment.likedBy.contains(widget.currentUserId);
   }
 
   @override
@@ -187,11 +184,15 @@ class _CommentCardState extends State<_CommentCard>
   void _onLike() {
     setState(() => liked = !liked);
     _controller.forward(from: 0.8);
+    context.read<CommentsBloc>().add(
+      ToggleLikeComment(comment: widget.comment, userId: widget.currentUserId),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final c = widget.comment;
+    final isAuthor = widget.currentUserId == c.userId;
 
     return Card(
       elevation: 2,
@@ -202,7 +203,6 @@ class _CommentCardState extends State<_CommentCard>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// 👤 AVATAR
             CircleAvatar(
               backgroundColor: Colors.blue.shade100,
               child: Text(
@@ -211,8 +211,6 @@ class _CommentCardState extends State<_CommentCard>
               ),
             ),
             const SizedBox(width: 10),
-
-            /// 💬 TEXTO
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,8 +229,6 @@ class _CommentCardState extends State<_CommentCard>
                 ],
               ),
             ),
-
-            /// ❤️ LIKE
             GestureDetector(
               onTap: _onLike,
               child: ScaleTransition(
@@ -243,6 +239,70 @@ class _CommentCardState extends State<_CommentCard>
                 ),
               ),
             ),
+            if (isAuthor) ...[
+              IconButton(
+                icon: const Icon(Icons.edit, size: 20, color: Colors.blue),
+                onPressed: () async {
+                  final controller = TextEditingController(text: c.content);
+                  final result = await showDialog<String>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Editar comentario'),
+                      content: TextField(
+                        controller: controller,
+                        maxLines: null,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(context, controller.text),
+                          child: const Text('Guardar'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (result != null && result.trim().isNotEmpty) {
+                    context.read<CommentsBloc>().add(
+                      EditComment(commentId: c.id, newContent: result.trim()),
+                    );
+                  }
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Eliminar comentario'),
+                      content: const Text(
+                        '¿Estás seguro de eliminar este comentario?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancelar'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            context.read<CommentsBloc>().add(
+                              DeleteComment(c.id),
+                            );
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Eliminar'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),
