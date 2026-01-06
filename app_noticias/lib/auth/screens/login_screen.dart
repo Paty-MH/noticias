@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -17,6 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
   bool _obscurePassword = true;
 
   @override
@@ -27,6 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() {
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
 
     context.read<AuthBloc>().add(
@@ -35,6 +39,10 @@ class _LoginScreenState extends State<LoginScreen> {
             passCtrl.text.trim(),
           ),
         );
+  }
+
+  void _guestLogin() {
+    context.read<AuthBloc>().add(const GuestLoginRequested());
   }
 
   @override
@@ -55,6 +63,8 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
+            if (!mounted) return;
+
             if (state is AuthError) {
               NotificationService.error(context, state.message);
             }
@@ -90,17 +100,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Form(
                   key: _formKey,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const SizedBox(height: 16),
 
-                      /// 🔥 TÍTULO
+                      /// TÍTULO
                       const Text(
                         'Bienvenido a',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 20,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 20),
                       ),
                       const SizedBox(height: 6),
                       ShaderMask(
@@ -154,15 +160,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : Icons.visibility,
                             color: Colors.purpleAccent,
                           ),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
                         ),
                         validator: (v) {
                           if (v == null || v.isEmpty) {
                             return 'Ingresa tu contraseña';
                           }
                           if (v.length < 6) {
-                            return 'Contraseña inválida';
+                            return 'Mínimo 6 caracteres';
                           }
                           return null;
                         },
@@ -170,52 +179,74 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 32),
 
-                      /// 🔥 BOTÓN GRADIENTE
+                      /// BOTÓN LOGIN
                       BlocBuilder<AuthBloc, AuthState>(
-                        builder: (_, state) {
-                          if (state is AuthLoading) {
+                        builder: (context, state) {
+                          final isLoading = state is AuthLoading;
+
+                          if (isLoading) {
                             return const CircularProgressIndicator(
                               color: Colors.purpleAccent,
                             );
                           }
-                          return Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFB721FF),
-                                  Color(0xFF8A2BE2),
-                                  Color(0xFFFF8C00),
-                                ],
-                              ),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
+
+                          return Column(
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(14),
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFB721FF),
+                                      Color(0xFF8A2BE2),
+                                      Color(0xFFFF8C00),
+                                    ],
+                                  ),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _login,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Entrar',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              child: const Text(
-                                'Entrar',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+
+                              const SizedBox(height: 12),
+
+                              /// 🔥 MODO INVITADO
+                              TextButton(
+                                onPressed: _guestLogin,
+                                child: const Text(
+                                  'Continuar como invitado',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           );
                         },
                       ),
 
                       const SizedBox(height: 20),
 
+                      /// REGISTRO
                       TextButton(
                         onPressed: () {
                           Navigator.push(
@@ -241,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  /// 🎯 INPUT REUTILIZABLE
+  /// INPUT REUTILIZABLE
   Widget _inputField({
     required TextEditingController controller,
     required String label,

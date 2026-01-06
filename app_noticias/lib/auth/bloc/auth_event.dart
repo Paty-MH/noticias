@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:equatable/equatable.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
+
   @override
   List<Object?> get props => [];
 }
@@ -13,6 +15,7 @@ class AppStarted extends AuthEvent {
 class LoginRequested extends AuthEvent {
   final String email, password;
   const LoginRequested(this.email, this.password);
+
   @override
   List<Object?> get props => [email, password];
 }
@@ -20,19 +23,26 @@ class LoginRequested extends AuthEvent {
 class RegisterRequested extends AuthEvent {
   final String name, email, password;
   const RegisterRequested(this.name, this.email, this.password);
+
   @override
   List<Object?> get props => [name, email, password];
 }
 
 class UpdateProfileRequested extends AuthEvent {
-  final String name, phone, imageUrl;
+  final String name;
+  final String phone;
+  final String imageUrl;
+  final File? imageFile; // 🔥 ahora sí está incluido
+
   const UpdateProfileRequested({
     required this.name,
     required this.phone,
     required this.imageUrl,
+    this.imageFile,
   });
+
   @override
-  List<Object?> get props => [name, phone, imageUrl];
+  List<Object?> get props => [name, phone, imageUrl, imageFile];
 }
 
 class DeleteAccountRequested extends AuthEvent {
@@ -41,4 +51,8 @@ class DeleteAccountRequested extends AuthEvent {
 
 class LogoutRequested extends AuthEvent {
   const LogoutRequested();
+}
+
+class GuestLoginRequested extends AuthEvent {
+  const GuestLoginRequested();
 }

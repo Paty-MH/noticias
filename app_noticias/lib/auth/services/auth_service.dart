@@ -25,9 +25,7 @@ class AuthService {
   Future<AppUser> login(String email, String password) async {
     try {
       final cred = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+          email: email, password: password);
       final doc = await _db.collection('users').doc(cred.user!.uid).get();
       if (!doc.exists) throw Exception('Usuario no encontrado');
       return AppUser.fromFirestore(cred.user!.uid, doc.data()!);
@@ -49,9 +47,7 @@ class AuthService {
   Future<AppUser> register(String name, String email, String password) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+          email: email, password: password);
       final user = AppUser(
         id: cred.user!.uid,
         name: name,
@@ -73,19 +69,27 @@ class AuthService {
     }
   }
 
-  /// ✏️ UPDATE PROFILE
+  /// ✏️ UPDATE PROFILE (ahora soporta imageFile)
   Future<AppUser> updateProfile({
     required String name,
     required String phone,
     required String imageUrl,
+    File? imageFile,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Usuario no autenticado');
 
+    String finalImageUrl = imageUrl;
+
+    // 🔥 Si envían imageFile, subimos a Firebase Storage
+    if (imageFile != null) {
+      finalImageUrl = await uploadProfileImage(imageFile);
+    }
+
     await _db.collection('users').doc(user.uid).update({
       'name': name,
       'phone': phone,
-      'imageUrl': imageUrl,
+      'imageUrl': finalImageUrl,
     });
 
     final doc = await _db.collection('users').doc(user.uid).get();
@@ -116,8 +120,9 @@ class AuthService {
       final doc = await _db.collection('users').doc(user.uid).get();
       if (doc.exists) {
         final imageUrl = doc.data()?['imageUrl'] as String?;
-        if (imageUrl != null && imageUrl.isNotEmpty)
+        if (imageUrl != null && imageUrl.isNotEmpty) {
           await _storage.refFromURL(imageUrl).delete();
+        }
       }
 
       await _db.collection('users').doc(user.uid).delete();

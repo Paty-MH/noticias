@@ -6,6 +6,7 @@ class AppUser extends Equatable {
   final String email;
   final String phone;
   final String imageUrl;
+  final bool isGuest;
 
   const AppUser({
     required this.id,
@@ -13,35 +14,56 @@ class AppUser extends Equatable {
     required this.email,
     required this.phone,
     required this.imageUrl,
+    this.isGuest = false,
   });
 
-  /// 🔄 COPY
-  AppUser copyWith({String? name, String? phone, String? imageUrl}) {
+  AppUser copyWith({
+    String? name,
+    String? phone,
+    String? imageUrl,
+    bool? isGuest,
+  }) {
     return AppUser(
       id: id,
       name: name ?? this.name,
       email: email,
       phone: phone ?? this.phone,
       imageUrl: imageUrl ?? this.imageUrl,
+      isGuest: isGuest ?? this.isGuest,
     );
   }
 
-  /// 🔥 FROM FIRESTORE
   factory AppUser.fromFirestore(String uid, Map<String, dynamic> data) {
     return AppUser(
       id: uid,
-      name: data['name'] as String? ?? '',
-      email: data['email'] as String? ?? '',
-      phone: data['phone'] as String? ?? '',
-      imageUrl: data['imageUrl'] as String? ?? '',
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      phone: data['phone'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
+      isGuest: false,
     );
   }
 
-  /// 💾 TO FIRESTORE
+  factory AppUser.guest() {
+    return const AppUser(
+      id: 'guest',
+      name: 'Invitado',
+      email: '',
+      phone: '',
+      imageUrl: '',
+      isGuest: true,
+    );
+  }
+
   Map<String, dynamic> toMap() {
-    return {'name': name, 'email': email, 'phone': phone, 'imageUrl': imageUrl};
+    return {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'imageUrl': imageUrl,
+    };
   }
 
   @override
-  List<Object?> get props => [id, name, email, phone, imageUrl];
+  List<Object?> get props => [id, name, email, phone, imageUrl, isGuest];
 }
