@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -55,11 +56,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
 
-      // 📰 APPBAR
+      // 🔥 APPBAR MEJORADA (solo visual)
       appBar: AppBar(
-        backgroundColor: Colors.black,
         elevation: 0,
+        backgroundColor: Colors.black.withOpacity(0.7),
         centerTitle: true,
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: const [
@@ -78,14 +85,23 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // 📦 BODY
-      body: BlocBuilder<NewsBloc, NewsState>(
-        builder: (context, state) {
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _buildState(context, state),
-          );
-        },
+      // 🎨 FONDO CON GRADIENTE
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.black, Color(0xFF1A0033)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: BlocBuilder<NewsBloc, NewsState>(
+          builder: (context, state) {
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _buildState(context, state),
+            );
+          },
+        ),
       ),
     );
   }
@@ -133,9 +149,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView.separated(
           key: const ValueKey('list'),
           controller: _scrollController,
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 32),
           itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             if (index < state.posts.length) {
               final post = state.posts[index];
@@ -146,8 +162,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: PostCard(
                   post: post,
                   isBookmarked: isBookmarked,
-
-                  // ✅ NAVEGACIÓN LIMPIA
                   onTap: () {
                     Navigator.push(
                       context,
@@ -156,7 +170,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     );
                   },
-
                   onBookmark: () {
                     context.read<NewsBloc>().add(ToggleBookmark(post));
                   },
@@ -229,12 +242,17 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+      child: Container(
+        margin: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade900,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade600),
+            Icon(icon, size: 64, color: Colors.purpleAccent),
             const SizedBox(height: 16),
             Text(
               title,

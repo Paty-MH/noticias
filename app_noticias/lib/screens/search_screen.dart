@@ -50,65 +50,81 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 🖼 FONDO
+          // 🌌 FONDO PRO
           Container(
             decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/news_bg.png'),
-                fit: BoxFit.cover,
+              gradient: RadialGradient(
+                center: Alignment.topLeft,
+                radius: 1.4,
+                colors: [
+                  Color(0xFF7B2CFF),
+                  Color(0xFF1A0033),
+                  Colors.black,
+                ],
               ),
             ),
           ),
 
-          // 🌑 OVERLAY
-          Container(color: Colors.black.withOpacity(0.6)),
+          // ✨ GLOW
+          Positioned(
+            top: -140,
+            left: -140,
+            child: Container(
+              width: 360,
+              height: 360,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.purpleAccent.withOpacity(0.25),
+              ),
+            ),
+          ),
 
           SafeArea(
             child: Column(
               children: [
-                const SizedBox(height: 12),
+                const SizedBox(height: 28),
 
-                // 📰 HEADER NEWSNAP
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                // 🧠 LOGO
+                Column(
                   children: const [
-                    Icon(
-                      Icons.flash_on_rounded,
-                      color: Colors.purpleAccent,
-                      size: 26,
-                    ),
-                    SizedBox(width: 6),
                     Text(
-                      'Newsnap',
+                      'NEWSNAP',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.6,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3,
                         color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Discover news intelligently',
+                      style: TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 1.4,
+                        color: Colors.white54,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 40),
 
-                // 🔍 SEARCH BAR
+                // 🔍 SEARCH
                 Expanded(
                   child: AnimatedAlign(
-                    alignment: _hasSearched
-                        ? Alignment.topCenter
-                        : Alignment.center,
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeOutQuart,
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutExpo,
+                    alignment:
+                        _hasSearched ? Alignment.topCenter : Alignment.center,
                     child: Padding(
                       padding: EdgeInsets.symmetric(
                         horizontal: 24,
-                        vertical: _hasSearched ? 16 : 0,
+                        vertical: _hasSearched ? 12 : 0,
                       ),
-                      child: _GlassSearchBar(
+                      child: _ProSearchBar(
                         controller: _controller,
                         onChanged: _search,
                         onClear: _clear,
@@ -117,113 +133,20 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
 
-                // 🔥 RESULTADOS
+                // 📦 RESULTADOS
                 if (_hasSearched)
                   Expanded(
-                    flex: 2,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOut,
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(32),
-                        ),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.75),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(32),
-                              ),
-                            ),
-                            child: BlocBuilder<NewsBloc, NewsState>(
-                              builder: (context, state) {
-                                if (state is SearchLoading) {
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Colors.purpleAccent,
-                                    ),
-                                  );
-                                }
-
-                                if (state is NewsError) {
-                                  return _SearchEmpty(
-                                    icon: Icons.error_outline,
-                                    title: 'Ocurrió un error',
-                                    subtitle: state.message,
-                                  );
-                                }
-
-                                if (state is SearchEmpty) {
-                                  return const _SearchEmpty(
-                                    icon: Icons.search_off,
-                                    title: 'Sin resultados',
-                                    subtitle:
-                                        'Intenta con otras palabras clave',
-                                  );
-                                }
-
-                                if (state is SearchLoaded) {
-                                  return ListView.separated(
-                                    padding: const EdgeInsets.all(16),
-                                    itemCount: state.results.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 12),
-                                    itemBuilder: (context, index) {
-                                      final post = state.results[index];
-                                      final isBookmarked = state.bookmarks
-                                          .contains(post.id);
-
-                                      return TweenAnimationBuilder<double>(
-                                        tween: Tween(begin: 0, end: 1),
-                                        duration: Duration(
-                                          milliseconds: 300 + index * 60,
-                                        ),
-                                        curve: Curves.easeOut,
-                                        builder: (context, value, child) {
-                                          return Opacity(
-                                            opacity: value,
-                                            child: Transform.translate(
-                                              offset: Offset(
-                                                0,
-                                                20 * (1 - value),
-                                              ),
-                                              child: child,
-                                            ),
-                                          );
-                                        },
-                                        child: PostCard(
-                                          post: post,
-                                          isBookmarked: isBookmarked,
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    PostDetailScreen(
-                                                      post: post,
-                                                    ),
-                                              ),
-                                            );
-                                          },
-                                          onBookmark: () {
-                                            context.read<NewsBloc>().add(
-                                              ToggleBookmark(post),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  );
-                                }
-
-                                return const SizedBox();
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
+                    flex: 3,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 500),
+                      builder: (context, value, child) {
+                        return Transform.translate(
+                          offset: Offset(0, 40 * (1 - value)),
+                          child: Opacity(opacity: value, child: child),
+                        );
+                      },
+                      child: _ResultsPanel(),
                     ),
                   ),
               ],
@@ -236,14 +159,14 @@ class _SearchScreenState extends State<SearchScreen> {
 }
 
 // ─────────────────────────────
-// 🔍 GLASS SEARCH BAR
+// 🔍 SEARCH BAR PRO
 // ─────────────────────────────
-class _GlassSearchBar extends StatelessWidget {
+class _ProSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
 
-  const _GlassSearchBar({
+  const _ProSearchBar({
     required this.controller,
     required this.onChanged,
     required this.onClear,
@@ -252,23 +175,37 @@ class _GlassSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(40),
+      borderRadius: BorderRadius.circular(36),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(40),
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.18),
+                Colors.white.withOpacity(0.08),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(36),
             border: Border.all(color: Colors.white24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.6),
+                blurRadius: 30,
+                offset: const Offset(0, 14),
+              ),
+            ],
           ),
           child: TextField(
             controller: controller,
             onChanged: onChanged,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
             decoration: InputDecoration(
-              hintText: 'Buscar en Newsnap...',
-              hintStyle: const TextStyle(color: Colors.white70),
+              hintText: 'Search news...',
+              hintStyle: const TextStyle(color: Colors.white54),
+              border: InputBorder.none,
               icon: const Icon(Icons.search, color: Colors.white),
               suffixIcon: controller.text.isNotEmpty
                   ? IconButton(
@@ -276,8 +213,97 @@ class _GlassSearchBar extends StatelessWidget {
                       onPressed: onClear,
                     )
                   : null,
-              border: InputBorder.none,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────
+// 📦 PANEL RESULTADOS
+// ─────────────────────────────
+class _ResultsPanel extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.65),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+          ),
+          child: BlocBuilder<NewsBloc, NewsState>(
+            builder: (context, state) {
+              if (state is SearchLoading) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.purpleAccent,
+                  ),
+                );
+              }
+
+              if (state is NewsError) {
+                return _SearchEmpty(
+                  icon: Icons.error_outline,
+                  title: 'Error',
+                  subtitle: state.message,
+                );
+              }
+
+              if (state is SearchEmpty) {
+                return const _SearchEmpty(
+                  icon: Icons.search_off,
+                  title: 'No results',
+                  subtitle: 'Try another keyword',
+                );
+              }
+
+              if (state is SearchLoaded) {
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: state.results.length,
+                  itemBuilder: (context, index) {
+                    final post = state.results[index];
+                    final isBookmarked = state.bookmarks.contains(post.id);
+
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 350 + index * 60),
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 30 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: PostCard(
+                        post: post,
+                        isBookmarked: isBookmarked,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PostDetailScreen(post: post),
+                            ),
+                          );
+                        },
+                        onBookmark: () {
+                          context.read<NewsBloc>().add(ToggleBookmark(post));
+                        },
+                      ),
+                    );
+                  },
+                );
+              }
+
+              return const SizedBox();
+            },
           ),
         ),
       ),

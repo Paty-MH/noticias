@@ -27,9 +27,8 @@ class PostDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          CommentsBloc(CommentsService())
-            ..add(LoadComments(post.id.toString())),
+      create: (_) => CommentsBloc(CommentsService())
+        ..add(LoadComments(post.id.toString())),
       child: _PostDetailView(post: post),
     );
   }
@@ -43,9 +42,8 @@ class _PostDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
-    final currentUserId = authState is AuthAuthenticated
-        ? authState.user.id
-        : 'anon';
+    final currentUserId =
+        authState is AuthAuthenticated ? authState.user.id : 'anon';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -213,42 +211,42 @@ class _PostDetailView extends StatelessWidget {
                                             onPressed: () async {
                                               final controller =
                                                   TextEditingController(
-                                                    text: c.content,
-                                                  );
+                                                text: c.content,
+                                              );
                                               final result =
                                                   await showDialog<String>(
-                                                    context: context,
-                                                    builder: (_) => AlertDialog(
-                                                      title: const Text(
-                                                        'Editar comentario',
+                                                context: context,
+                                                builder: (_) => AlertDialog(
+                                                  title: const Text(
+                                                    'Editar comentario',
+                                                  ),
+                                                  content: TextField(
+                                                    controller: controller,
+                                                    maxLines: null,
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                        context,
                                                       ),
-                                                      content: TextField(
-                                                        controller: controller,
-                                                        maxLines: null,
+                                                      child: const Text(
+                                                        'Cancelar',
                                                       ),
-                                                      actions: [
-                                                        TextButton(
-                                                          onPressed: () =>
-                                                              Navigator.pop(
-                                                                context,
-                                                              ),
-                                                          child: const Text(
-                                                            'Cancelar',
-                                                          ),
-                                                        ),
-                                                        TextButton(
-                                                          onPressed: () =>
-                                                              Navigator.pop(
-                                                                context,
-                                                                controller.text,
-                                                              ),
-                                                          child: const Text(
-                                                            'Guardar',
-                                                          ),
-                                                        ),
-                                                      ],
                                                     ),
-                                                  );
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                        context,
+                                                        controller.text,
+                                                      ),
+                                                      child: const Text(
+                                                        'Guardar',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
 
                                               if (result != null &&
                                                   result.trim().isNotEmpty) {
@@ -257,8 +255,8 @@ class _PostDetailView extends StatelessWidget {
                                                     .add(
                                                       EditComment(
                                                         commentId: c.id,
-                                                        newContent: result
-                                                            .trim(),
+                                                        newContent:
+                                                            result.trim(),
                                                       ),
                                                     );
                                               }
@@ -284,8 +282,8 @@ class _PostDetailView extends StatelessWidget {
                                                     TextButton(
                                                       onPressed: () =>
                                                           Navigator.pop(
-                                                            context,
-                                                          ),
+                                                        context,
+                                                      ),
                                                       child: const Text(
                                                         'Cancelar',
                                                       ),
@@ -294,8 +292,7 @@ class _PostDetailView extends StatelessWidget {
                                                       onPressed: () {
                                                         context
                                                             .read<
-                                                              CommentsBloc
-                                                            >()
+                                                                CommentsBloc>()
                                                             .add(
                                                               DeleteComment(
                                                                 c.id,
@@ -387,13 +384,13 @@ class _AddCommentInputState extends State<_AddCommentInput> {
             }
 
             context.read<CommentsBloc>().add(
-              AddComment(
-                postId: widget.postId,
-                content: ctrl.text.trim(),
-                userName: userName,
-                userId: userId,
-              ),
-            );
+                  AddComment(
+                    postId: widget.postId,
+                    content: ctrl.text.trim(),
+                    userName: userName,
+                    userId: userId,
+                  ),
+                );
 
             ctrl.clear();
           },

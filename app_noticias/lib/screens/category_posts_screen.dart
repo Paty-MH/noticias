@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -25,89 +26,136 @@ class _CategoryPostsScreenState extends State<CategoryPostsScreen> {
   @override
   void initState() {
     super.initState();
-
-    // ✅ Cargar posts de la categoría al entrar
-    context.read<NewsBloc>().add(FetchPostsByCategory(widget.categoryId));
+    context.read<NewsBloc>().add(
+          FetchPostsByCategory(widget.categoryId),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(title: Text(widget.categoryName), centerTitle: true),
+      backgroundColor: Colors.black,
 
-      body: BlocBuilder<NewsBloc, NewsState>(
-        buildWhen: (_, state) =>
-            state is NewsLoading ||
-            state is NewsLoaded ||
-            state is NewsEmpty ||
-            state is NewsError,
+      // 🔥 APPBAR CON BLUR
+      appBar: AppBar(
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.black.withOpacity(0.6),
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+        title: Text(
+          widget.categoryName,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
+        ),
+      ),
 
-        builder: (context, state) {
-          // ⏳ Loading
-          if (state is NewsLoading) {
-            return const Center(
-              child: CircularProgressIndicator(strokeWidth: 3),
-            );
-          }
+      // 🎨 FONDO
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black,
+              Color(0xFF1A0033),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: BlocBuilder<NewsBloc, NewsState>(
+          buildWhen: (_, state) =>
+              state is NewsLoading ||
+              state is NewsLoaded ||
+              state is NewsEmpty ||
+              state is NewsError,
+          builder: (context, state) {
+            // ⏳ LOADING
+            if (state is NewsLoading) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: Colors.purpleAccent,
+                ),
+              );
+            }
 
-          // ❌ Error
-          if (state is NewsError) {
-            return _EmptyState(
-              icon: Icons.error_outline,
-              title: 'Error',
-              subtitle: state.message,
-            );
-          }
+            // ❌ ERROR
+            if (state is NewsError) {
+              return _EmptyState(
+                icon: Icons.error_outline,
+                title: 'Ocurrió un error',
+                subtitle: state.message,
+              );
+            }
 
-          // 🚫 Sin posts
-          if (state is NewsEmpty) {
-            return const _EmptyState(
-              icon: Icons.newspaper_outlined,
-              title: 'Sin noticias',
-              subtitle: 'No hay noticias en esta categoría',
-            );
-          }
+            // 🚫 VACÍO
+            if (state is NewsEmpty) {
+              return const _EmptyState(
+                icon: Icons.newspaper_outlined,
+                title: 'Sin noticias',
+                subtitle: 'No hay noticias en esta categoría',
+              );
+            }
 
-          // ✅ Posts cargados
-          if (state is NewsLoaded) {
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
-              itemCount: state.posts.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final post = state.posts[index];
-                final isBookmarked = state.bookmarks.contains(post.id);
+            // ✅ POSTS
+            if (state is NewsLoaded) {
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(12, 20, 12, 28),
+                itemCount: state.posts.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final post = state.posts[index];
+                  final isBookmarked = state.bookmarks.contains(post.id);
 
-                return PostCard(
-                  post: post,
-                  isBookmarked: isBookmarked,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PostDetailScreen(post: post),
-                      ),
-                    );
-                  },
-                  onBookmark: () {
-                    context.read<NewsBloc>().add(ToggleBookmark(post));
-                  },
-                );
-              },
-            );
-          }
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: Duration(milliseconds: 300 + index * 40),
+                    curve: Curves.easeOut,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 20 * (1 - value)),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: PostCard(
+                      post: post,
+                      isBookmarked: isBookmarked,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PostDetailScreen(post: post),
+                          ),
+                        );
+                      },
+                      onBookmark: () {
+                        context.read<NewsBloc>().add(ToggleBookmark(post));
+                      },
+                    ),
+                  );
+                },
+              );
+            }
 
-          return const SizedBox();
-        },
+            return const SizedBox();
+          },
+        ),
       ),
     );
   }
 }
 
 // ─────────────────────────────
-// 📭 EMPTY STATE
+// 📭 EMPTY / ERROR STATE
 // ─────────────────────────────
 class _EmptyState extends StatelessWidget {
   final IconData icon;
@@ -123,22 +171,38 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+      child: Container(
+        margin: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade900,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.purpleAccent.withOpacity(0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade400),
+            Icon(icon, size: 64, color: Colors.purpleAccent),
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: Colors.grey.shade400),
             ),
           ],
         ),

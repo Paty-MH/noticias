@@ -28,116 +28,211 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() {
     if (!_formKey.currentState!.validate()) return;
+
     context.read<AuthBloc>().add(
-      LoginRequested(emailCtrl.text.trim(), passCtrl.text.trim()),
-    );
+          LoginRequested(
+            emailCtrl.text.trim(),
+            passCtrl.text.trim(),
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Iniciar sesión'),
-        backgroundColor: Colors.purpleAccent,
-      ),
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthError) {
-            NotificationService.error(context, state.message);
-          }
-          if (state is AuthAuthenticated) {
-            NotificationService.success(
-              context,
-              'Bienvenido ${state.user.name} 🎉',
-            );
-            Navigator.pushReplacementNamed(context, '/home');
-          }
-        },
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Email'),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Ingresa tu email';
-                      if (!v.contains('@')) return 'Email inválido';
-                      return null;
-                    },
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0B0B0B),
+              Color(0xFF2A004F),
+              Color(0xFF000000),
+            ],
+          ),
+        ),
+        child: BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthError) {
+              NotificationService.error(context, state.message);
+            }
+
+            if (state is AuthAuthenticated) {
+              NotificationService.success(
+                context,
+                'Bienvenido ${state.user.name} 🎉',
+              );
+              Navigator.pushReplacementNamed(context, '/home');
+            }
+          },
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.white.withOpacity(0.06),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.15),
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: passCtrl,
-                    obscureText: _obscurePassword,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration(
-                      'Contraseña',
-                      suffix: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.purpleAccent,
-                        ),
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.purpleAccent.withOpacity(0.35),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
+                    ),
+                  ],
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 16),
+
+                      /// 🔥 TÍTULO
+                      const Text(
+                        'Bienvenido a',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 20,
                         ),
                       ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty)
-                        return 'Ingresa tu contraseña';
-                      if (v.length < 6) return 'Contraseña inválida';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (_, state) {
-                      if (state is AuthLoading)
-                        return const CircularProgressIndicator();
-                      return SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _login,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.purpleAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 6),
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [
+                            Color(0xFFB721FF),
+                            Color(0xFFFF8C00),
+                          ],
+                        ).createShader(bounds),
+                        child: const Text(
+                          'Newsnap',
+                          style: TextStyle(
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      /// EMAIL
+                      _inputField(
+                        controller: emailCtrl,
+                        label: 'Email',
+                        icon: Icons.email,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Ingresa tu email';
+                          }
+                          if (!v.contains('@')) {
+                            return 'Email inválido';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      /// PASSWORD
+                      _inputField(
+                        controller: passCtrl,
+                        label: 'Contraseña',
+                        icon: Icons.lock,
+                        obscure: _obscurePassword,
+                        suffix: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.purpleAccent,
+                          ),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Ingresa tu contraseña';
+                          }
+                          if (v.length < 6) {
+                            return 'Contraseña inválida';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      /// 🔥 BOTÓN GRADIENTE
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (_, state) {
+                          if (state is AuthLoading) {
+                            return const CircularProgressIndicator(
+                              color: Colors.purpleAccent,
+                            );
+                          }
+                          return Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFB721FF),
+                                  Color(0xFF8A2BE2),
+                                  Color(0xFFFF8C00),
+                                ],
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Entrar',
-                            style: TextStyle(fontSize: 18, color: Colors.black),
-                          ),
+                            child: ElevatedButton(
+                              onPressed: _login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text(
+                                'Entrar',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          '¿No tienes cuenta? Crear cuenta',
+                          style: TextStyle(color: Colors.white70),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      '¿No tienes cuenta? Crear cuenta',
-                      style: TextStyle(color: Colors.purpleAccent),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -146,16 +241,34 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, {Widget? suffix}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.purpleAccent),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.purpleAccent),
+  /// 🎯 INPUT REUTILIZABLE
+  Widget _inputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscure = false,
+    Widget? suffix,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: Colors.white),
+      validator: validator,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.08),
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.purpleAccent),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      suffixIcon: suffix,
     );
   }
 }
